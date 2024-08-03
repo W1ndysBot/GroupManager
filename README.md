@@ -50,3 +50,15 @@
   - 例子: `disable_invite_chain`
 - **view_invite_chain**: 查看指定用户的邀请链
   - 例子: `view_invite_chain 用户ID`
+
+## 视频检测管理
+
+- **enable_video_check**: 开启视频检测
+  - 例子: `enable_video_check`
+- **disable_video_check**: 关闭视频检测
+  - 例子: `disable_video_check`
+
+## 群状态查看
+
+- **view_group_status**: 查看群内所有状态开关情况
+  - 例子: `view_group_status`
