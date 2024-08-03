@@ -21,6 +21,48 @@ from app.config import owner_id
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
+# 菜单提示
+async def show_menu(websocket, group_id):
+    menu_message = """
+群管系统菜单:
+违禁词管理:
+- 添加违禁词: add_banned_word 违禁词 或 添加违禁词 违禁词
+- 移除违禁词: remove_banned_word 违禁词 或 移除违禁词 违禁词
+- 查看违禁词列表: list_banned_words 或 查看违禁词
+- 开启违禁词检测: enable_banned_words 或 开启违禁词检测
+- 关闭违禁词检测: disable_banned_words 或 关闭违禁词检测
+
+禁言管理:
+- 禁言自己随机时间: banme 或 禁言我
+- 禁言指定用户: ban @用户 60 或 禁言 @用户 60
+- 随机禁言一个用户: banrandom 或 随机禁言
+- 解禁指定用户: unban @用户 或 解禁 @用户
+
+群管理:
+- 开启全员禁言: 全员禁言 或 mute_all
+- 关闭全员禁言: 全员解禁 或 unmute_all
+- 踢出指定用户: kick @用户 或 踢 @用户
+- 撤回消息: recall 或 撤回
+
+欢迎和欢送:
+- 开启入群欢迎和退群欢送: enable_welcome_message 或 开启入群欢迎
+- 关闭入群欢迎和退群欢送: disable_welcome_message 或 关闭入群欢迎
+
+邀请链管理:
+- 开启邀请链功能: enable_invite_chain 或 开启邀请链
+- 关闭邀请链功能: disable_invite_chain 或 关闭邀请链
+- 查看指定用户的邀请链: view_invite_chain 用户ID 或 查看邀请链 用户ID
+
+视频检测管理:
+- 开启视频检测: enable_video_check 或 开启视频检测
+- 关闭视频检测: disable_video_check 或 关闭视频检测
+
+群状态查看:
+- 查看群内所有状态开关情况: view_group_status 或 查看群状态
+    """
+    await send_group_msg(websocket, group_id, menu_message)
+
+
 # 判断用户是否是QQ群群主
 async def is_qq_owner(role):
     if role == "owner":
@@ -451,6 +493,10 @@ async def handle_group_message(websocket, msg):
         is_admin = await is_qq_admin(role)
         is_owner = await is_qq_owner(role)
         is_authorized = (is_admin or is_owner) or (user_id in owner_id)
+
+        # 显示菜单
+        if raw_message == "菜单" or raw_message == "menu" and is_authorized:
+            await show_menu(websocket, group_id)
 
         # 检查是否为管理员发送的"测试"消息
         if is_authorized and (raw_message == "测试" or raw_message == "test"):
