@@ -495,7 +495,7 @@ async def handle_group_message(websocket, msg):
         is_authorized = (is_admin or is_owner) or (user_id in owner_id)
 
         # 显示菜单
-        if raw_message == "菜单" or raw_message == "menu" and is_authorized:
+        if raw_message == "群管系统" or raw_message == "group_manager" and is_authorized:
             await show_menu(websocket, group_id)
 
         # 检查是否为管理员发送的"测试"消息
