@@ -1,0 +1,18 @@
+[
+    {
+        "group_id": 728077087,
+        "invite_chain_status": true,
+        "welcome_status": true,
+        "farewell_status": true,
+        "banned_words_status": true,
+        "video_check_status": false
+    },
+    {
+        "group_id": 946997620,
+        "invite_chain_status": true,
+        "welcome_status": true,
+        "farewell_status": true,
+        "banned_words_status": true,
+        "video_check_status": true
+    }
+]

@@ -1,10 +1,7 @@
 # 群管系统
 import json
 import logging
-import asyncio
-import websockets
 import re
-import colorlog
 import os
 import random
 import sys
@@ -22,6 +19,22 @@ from app.config import owner_id
 
 # 定义数据目录
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+
+# 判断用户是否是QQ群群主
+async def is_qq_owner(role):
+    if role == "owner":
+        return True
+    else:
+        return False
+
+
+# 判断用户是否是QQ群管理员
+async def is_qq_admin(role):
+    if role == "admin":
+        return True
+    else:
+        return False
 
 
 # 读取违禁词列表
@@ -47,27 +60,119 @@ def save_banned_words(group_id, banned_words):
         json.dump(banned_words, f, ensure_ascii=False, indent=4)
 
 
-# 读取违禁词检测状态
-def load_banned_words_status(group_id):
+# 读取状态
+def load_status(group_id, key):
     try:
         with open(
-            f"{DATA_DIR}/banned_words_status_{group_id}.json",
+            f"{DATA_DIR}/group_status.json",
             "r",
             encoding="utf-8",
         ) as f:
-            return json.load(f).get("status", True)
+            data = json.load(f)
+            # 遍历列表找到对应的 group_id
+            for group_status in data:
+                if group_status["group_id"] == group_id:
+                    return group_status.get(key, False)  # 默认关闭
+            return False  # 如果没有找到对应的 group_id，默认关闭
     except FileNotFoundError:
-        return True  # 默认开启
+        return False  # 默认关闭
+
+
+# 保存状态
+def save_status(group_id, key, status):
+    try:
+        with open(
+            f"{DATA_DIR}/group_status.json",
+            "r",
+            encoding="utf-8",
+        ) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        data = []
+
+    # 查找是否已有该 group_id 的状态
+    group_found = False
+    for group_status in data:
+        if group_status["group_id"] == group_id:
+            group_status[key] = status
+            group_found = True
+            break
+
+    # 如果没有找到该 group_id，则添加新的状态
+    if not group_found:
+        data.append({"group_id": group_id, key: status})
+
+    with open(
+        f"{DATA_DIR}/group_status.json",
+        "w",
+        encoding="utf-8",
+    ) as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+# 读取违禁词检测状态
+def load_banned_words_status(group_id):
+    return load_status(group_id, "banned_words_status")
 
 
 # 保存违禁词检测状态
 def save_banned_words_status(group_id, status):
-    with open(
-        f"{DATA_DIR}/banned_words_status_{group_id}.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump({"status": status}, f, ensure_ascii=False, indent=4)
+    save_status(group_id, "banned_words_status", status)
+
+
+# 读取视频检测状态
+def load_video_check_status(group_id):
+    return load_status(group_id, "video_check_status")
+
+
+# 保存视频检测状态
+def save_video_check_status(group_id, status):
+    save_status(group_id, "video_check_status", status)
+
+
+# 读取入群欢迎状态
+def load_welcome_status(group_id):
+    return load_status(group_id, "welcome_status")
+
+
+# 保存入群欢迎状态
+def save_welcome_status(group_id, status):
+    save_status(group_id, "welcome_status", status)
+    # 同步设置退群欢送状态
+    save_farewell_status(group_id, status)
+
+
+# 读取退群欢送状态
+def load_farewell_status(group_id):
+    return load_status(group_id, "farewell_status")
+
+
+# 保存退群欢送状态
+def save_farewell_status(group_id, status):
+    save_status(group_id, "farewell_status", status)
+
+
+# 读取邀请链状态
+def load_invite_chain_status(group_id):
+    return load_status(group_id, "invite_chain_status")
+
+
+# 保存邀请链状态
+def save_invite_chain_status(group_id, status):
+    save_status(group_id, "invite_chain_status", status)
+
+
+# 读取群状态
+def load_group_status(group_id):
+    try:
+        with open(f"{DATA_DIR}/group_status.json", "r", encoding="utf-8") as f:
+            group_status_list = json.load(f)
+            for group_status in group_status_list:
+                if group_status["group_id"] == group_id:
+                    return group_status
+            return None
+    except FileNotFoundError:
+        return None
 
 
 # 查看违禁词列表
@@ -78,22 +183,6 @@ async def list_banned_words(websocket, group_id):
     else:
         banned_words_message = "违禁词列表为空。"
     await send_group_msg(websocket, group_id, banned_words_message)
-
-
-# 判断用户是否是QQ群群主
-async def is_qq_owner(role):
-    if role == "owner":
-        return True
-    else:
-        return False
-
-
-# 判断用户是否是QQ群管理员
-async def is_qq_admin(role):
-    if role == "admin":
-        return True
-    else:
-        return False
 
 
 # 禁言自己随机时间
@@ -193,9 +282,11 @@ async def check_banned_words(websocket, group_id, msg):
             user_id = msg["sender"]["user_id"]
             await set_group_ban(websocket, group_id, user_id, 60)
             return True
-    # 检查是否包含视频
-    if any(item["type"] == "video" for item in msg["message"]):
 
+    # 检查是否包含视频
+    if load_video_check_status(group_id) and any(
+        item["type"] == "video" for item in msg["message"]
+    ):
         # 撤回消息
         message_id = int(msg["message_id"])
         await delete_msg(websocket, message_id)
@@ -203,77 +294,6 @@ async def check_banned_words(websocket, group_id, msg):
         return True
 
     return False
-
-
-# 读取入群欢迎状态
-def load_welcome_status(group_id):
-    try:
-        with open(
-            f"{DATA_DIR}/welcome_status_{group_id}.json",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            return json.load(f).get("status", True)
-    except FileNotFoundError:
-        return True  # 默认开启
-
-
-# 保存入群欢迎状态
-def save_welcome_status(group_id, status):
-    with open(
-        f"{DATA_DIR}/welcome_status_{group_id}.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump({"status": status}, f, ensure_ascii=False, indent=4)
-    # 同步设置退群欢送状态
-    save_farewell_status(group_id, status)
-
-
-# 保存退群欢送状态
-def save_farewell_status(group_id, status):
-    with open(
-        f"{DATA_DIR}/farewell_status_{group_id}.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump({"status": status}, f, ensure_ascii=False, indent=4)
-
-
-# 读取退群欢送状态
-def load_farewell_status(group_id):
-    try:
-        with open(
-            f"{DATA_DIR}/farewell_status_{group_id}.json",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            return json.load(f).get("status", True)
-    except FileNotFoundError:
-        return True  # 默认开启
-
-
-# 读取邀请链状态
-def load_invite_chain_status(group_id):
-    try:
-        with open(
-            f"{DATA_DIR}/invite_chain_status_{group_id}.json",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            return json.load(f).get("status", True)
-    except FileNotFoundError:
-        return True  # 默认开启
-
-
-# 保存邀请链状态
-def save_invite_chain_status(group_id, status):
-    with open(
-        f"{DATA_DIR}/invite_chain_status_{group_id}.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump({"status": status}, f, ensure_ascii=False, indent=4)
 
 
 # 扫描邀请链
@@ -409,20 +429,12 @@ async def handle_group_notice(websocket, msg):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"已记录[CQ:at,qq={user_id}]的邀请链，邀请者为[CQ:at,qq={operator_id}]，请勿在群内发送违规信息",
+                f"已记录 [CQ:at,qq={user_id}] 的邀请链，邀请者为 [CQ:at,qq={operator_id}] ，请勿在群内发送违规信息",
             )
 
     # 退群消息
     if msg["notice_type"] == "group_decrease":
         await handle_farewell_message(websocket, group_id, user_id, sub_type)
-        # 删除邀请链
-        # 由于删除会导致邀请链断开, 所以不设置退群删除
-        # await delete_invite_chain(group_id, user_id)
-        # await send_group_msg(
-        #     websocket,
-        #     group_id,
-        #     f"已删除{user_id}的邀请链",
-        # )
 
 
 # 处理群消息
@@ -453,11 +465,11 @@ async def handle_group_message(websocket, msg):
             return
 
         # 全员禁言
-        if raw_message == "全员禁言" and is_authorized:
+        if raw_message == "全员禁言" or raw_message == "mute_all" and is_authorized:
             await set_group_whole_ban(websocket, group_id, True)  # 全员禁言
 
         # 全员解禁
-        if raw_message == "全员解禁" and is_authorized:
+        if raw_message == "全员解禁" or raw_message == "unmute_all" and is_authorized:
             await set_group_whole_ban(websocket, group_id, False)  # 全员解禁
 
         # 踢人
@@ -480,27 +492,39 @@ async def handle_group_message(websocket, msg):
         # 禁言命令
         if re.match(r"ban.*", raw_message):
             # 禁言自己随机时间
-            if raw_message == "banme":
+            if raw_message == "banme" or raw_message == "禁言我":
                 await banme_random_time(websocket, group_id, user_id)
             # 禁言指定用户
-            if re.match(r"ban.*", raw_message) and is_authorized:
+            if (
+                re.match(r"ban.*", raw_message) or re.match(r"禁言.*", raw_message)
+            ) and is_authorized:
                 await ban_user(websocket, group_id, msg["message"])
             # 随机禁言随机秒
-            if raw_message == "banrandom" and is_authorized:
+            if (
+                raw_message == "banrandom"
+                or raw_message == "随机禁言"
+                and is_authorized
+            ):
                 await ban_random_user(websocket, group_id, msg["message"])
 
         # 解禁
-        if re.match(r"unban.*", raw_message) and is_authorized:
+        if (
+            re.match(r"unban.*", raw_message)
+            or re.match(r"解禁.*", raw_message)
+            and is_authorized
+        ):
             await unban_user(websocket, group_id, msg["message"])
 
         # 撤回消息
-        if "recall" in raw_message and is_authorized:
+        if "recall" in raw_message or "撤回" in raw_message and is_authorized:
             message_id = int(msg["message"][0]["data"]["id"])  # 获取回复消息的消息id
             await delete_msg(websocket, message_id)
 
         # 管理违禁词
         if is_authorized:
-            if raw_message.startswith("add_banned_word "):
+            if raw_message.startswith("add_banned_word ") or raw_message.startswith(
+                "添加违禁词 "
+            ):
                 new_word = raw_message.split(" ", 1)[1].strip()
                 banned_words = load_banned_words(group_id)
                 if new_word not in banned_words:
@@ -509,7 +533,9 @@ async def handle_group_message(websocket, msg):
                     await send_group_msg(
                         websocket, group_id, f"已添加违禁词: {new_word}"
                     )
-            elif raw_message.startswith("remove_banned_word "):
+            elif raw_message.startswith(
+                "remove_banned_word "
+            ) or raw_message.startswith("移除违禁词 "):
                 remove_word = raw_message.split(" ", 1)[1].strip()
                 banned_words = load_banned_words(group_id)
                 if remove_word in banned_words:
@@ -518,35 +544,78 @@ async def handle_group_message(websocket, msg):
                     await send_group_msg(
                         websocket, group_id, f"已移除违禁词: {remove_word}"
                     )
-            elif raw_message == "list_banned_words":
+            elif raw_message == "list_banned_words" or raw_message == "查看违禁词":
                 await list_banned_words(websocket, group_id)
 
         # 管理违禁词检测状态
         if is_authorized:
-            if raw_message == "enable_banned_words":
-                save_banned_words_status(group_id, True)
-                await send_group_msg(websocket, group_id, "已开启违禁词检测。")
-            elif raw_message == "disable_banned_words":
-                save_banned_words_status(group_id, False)
-                await send_group_msg(websocket, group_id, "已关闭违禁词检测。")
+            if raw_message == "enable_banned_words" or raw_message == "开启违禁词检测":
+                if load_banned_words_status(group_id):
+                    await send_group_msg(
+                        websocket, group_id, "违禁词检测已经开启了，无需重复开启。"
+                    )
+                else:
+                    save_banned_words_status(group_id, True)
+                    await send_group_msg(websocket, group_id, "已开启违禁词检测。")
+            elif (
+                raw_message == "disable_banned_words" or raw_message == "关闭违禁词检测"
+            ):
+                if not load_banned_words_status(group_id):
+                    await send_group_msg(
+                        websocket, group_id, "违禁词检测已经关闭了，无需重复关闭。"
+                    )
+                else:
+                    save_banned_words_status(group_id, False)
+                    await send_group_msg(websocket, group_id, "已关闭违禁词检测。")
 
         # 管理入群欢迎信息
         if is_authorized:
-            if raw_message == "enable_welcome_message":
-                save_welcome_status(group_id, True)
-                await send_group_msg(websocket, group_id, "已开启入群欢迎和退群欢送。")
-            elif raw_message == "disable_welcome_message":
-                save_welcome_status(group_id, False)
-                await send_group_msg(websocket, group_id, "已关闭入群欢迎和退群欢送。")
+            if raw_message == "enable_welcome_message" or raw_message == "开启入群欢迎":
+                if load_welcome_status(group_id):
+                    await send_group_msg(
+                        websocket,
+                        group_id,
+                        "入群欢迎和退群欢送已经开启了，无需重复开启。",
+                    )
+                else:
+                    save_welcome_status(group_id, True)
+                    await send_group_msg(
+                        websocket, group_id, "已开启入群欢迎和退群欢送。"
+                    )
+            elif (
+                raw_message == "disable_welcome_message"
+                or raw_message == "关闭入群欢迎"
+            ):
+                if not load_welcome_status(group_id):
+                    await send_group_msg(
+                        websocket,
+                        group_id,
+                        "入群欢迎和退群欢送已经关闭了，无需重复关闭。",
+                    )
+                else:
+                    save_welcome_status(group_id, False)
+                    await send_group_msg(
+                        websocket, group_id, "已关闭入群欢迎和退群欢送。"
+                    )
 
         # 管理邀请链状态
         if is_authorized:
-            if raw_message == "enable_invite_chain":
-                save_invite_chain_status(group_id, True)
-                await send_group_msg(websocket, group_id, "已开启邀请链功能。")
-            elif raw_message == "disable_invite_chain":
-                save_invite_chain_status(group_id, False)
-                await send_group_msg(websocket, group_id, "已关闭邀请链功能。")
+            if raw_message == "enable_invite_chain" or raw_message == "开启邀请链":
+                if load_invite_chain_status(group_id):
+                    await send_group_msg(
+                        websocket, group_id, "邀请链功能已经开启过了，无需重复开启。"
+                    )
+                else:
+                    save_invite_chain_status(group_id, True)
+                    await send_group_msg(websocket, group_id, "已开启邀请链功能。")
+            elif raw_message == "disable_invite_chain" or raw_message == "关闭邀请链":
+                if not load_invite_chain_status(group_id):
+                    await send_group_msg(
+                        websocket, group_id, "邀请链功能已经关闭了，无需重复关闭。"
+                    )
+                else:
+                    save_invite_chain_status(group_id, False)
+                    await send_group_msg(websocket, group_id, "已关闭邀请链功能。")
 
         # 扫描邀请链
         if raw_message.startswith("view_invite_chain ") or raw_message.startswith(
@@ -554,6 +623,42 @@ async def handle_group_message(websocket, msg):
         ):
             target_user_id = raw_message.split(" ", 1)[1].strip()
             await view_invite_chain(websocket, group_id, target_user_id)
+
+        # 管理视频检测状态
+        if is_authorized:
+            if raw_message == "enable_video_check" or raw_message == "开启视频检测":
+                if load_video_check_status(group_id):
+                    await send_group_msg(
+                        websocket, group_id, "视频检测已经开启了，无需重复开启。"
+                    )
+                else:
+                    save_video_check_status(group_id, True)
+                    await send_group_msg(websocket, group_id, "已开启视频检测。")
+            elif raw_message == "disable_video_check" or raw_message == "关闭视频检测":
+                if not load_video_check_status(group_id):
+                    await send_group_msg(
+                        websocket, group_id, "视频检测已经关闭了，无需重复关闭。"
+                    )
+                else:
+                    save_video_check_status(group_id, False)
+                    await send_group_msg(websocket, group_id, "已关闭视频检测。")
+
+        # 查看群内所有状态开关情况
+        if raw_message == "view_group_status" or raw_message == "查看群状态":
+            group_status = load_group_status(group_id)
+
+            if group_status:
+                status_message = (
+                    f"群 {group_id} 的状态:\n"
+                    f"邀请链功能: {group_status.get('invite_chain_status', False)}\n"
+                    f"入群欢迎: {group_status.get('welcome_status', False)}\n"
+                    f"退群欢送: {group_status.get('farewell_status', False)}\n"
+                    f"违禁词检测: {group_status.get('banned_words_status', False)}\n"
+                    f"视频检测: {group_status.get('video_check_status', False)}"
+                )
+            else:
+                status_message = f"未找到群 {group_id} 的状态信息。"
+            await send_group_msg(websocket, group_id, status_message)
 
     except Exception as e:
         logging.error(f"处理群消息时出错: {e}")
