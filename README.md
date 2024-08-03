@@ -1,6 +1,7 @@
-# 群管系统命令列表
+# GroupManager
 
 ## 违禁词管理
+
 - **add_banned_word**: 添加违禁词
   - 例子: `add_banned_word 违禁词`
 - **remove_banned_word**: 移除违禁词
@@ -13,6 +14,7 @@
   - 例子: `disable_banned_words`
 
 ## 禁言管理
+
 - **banme**: 禁言自己随机时间
   - 例子: `banme`
 - **ban**: 禁言指定用户
@@ -23,6 +25,7 @@
   - 例子: `unban @用户`
 
 ## 群管理
+
 - **全员禁言**: 开启全员禁言
   - 例子: `全员禁言`
 - **全员解禁**: 关闭全员禁言
@@ -33,12 +36,14 @@
   - 例子: `recall`
 
 ## 欢迎和欢送
+
 - **enable_welcome_message**: 开启入群欢迎和退群欢送
   - 例子: `enable_welcome_message`
 - **disable_welcome_message**: 关闭入群欢迎和退群欢送
   - 例子: `disable_welcome_message`
 
 ## 邀请链管理
+
 - **enable_invite_chain**: 开启邀请链功能
   - 例子: `enable_invite_chain`
 - **disable_invite_chain**: 关闭邀请链功能
