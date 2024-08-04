@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from .group_status import load_status, save_status
 
 
@@ -58,7 +59,7 @@ async def check_banned_words(websocket, group_id, msg):
     ):
         return False
 
-    if f"\\u[0-9a-fA-F]{4}" in msg.get("raw_message"):
+    if re.search(r"\\u[0-9a-fA-F]{4}", msg.get("raw_message")):
         warning_message = "检测到消息中有不可见字符，请不要发送违禁词！"
         await send_group_msg(websocket, group_id, warning_message)
         user_id = msg["sender"]["user_id"]
