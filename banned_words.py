@@ -15,6 +15,12 @@ async def is_group_admin(role):
     return role == "admin"
 
 
+async def is_authorized(user_id, role, owner_id):
+    is_admin = await is_group_admin(role)
+    is_owner = await is_group_owner(role)
+    return (is_admin or is_owner) or (user_id in owner_id)
+
+
 def load_banned_words(group_id):
     try:
         with open(
@@ -39,10 +45,8 @@ def save_banned_words_status(group_id, status):
 
 
 async def check_banned_words(websocket, group_id, msg):
-    if (
-        not load_banned_words_status(group_id)
-        or not is_group_admin(msg["sender"]["role"])
-        or not is_group_owner(msg["sender"]["role"])
+    if not load_banned_words_status(group_id) or await is_authorized(
+        msg["sender"]["user_id"], msg["sender"]["role"], msg["sender"]["user_id"]
     ):
         return False
 
