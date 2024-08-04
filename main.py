@@ -2,21 +2,21 @@ import logging
 import re
 import os
 import sys
-from .banned_words import *
-from .group_status import *
-from .invite_chain import *
-from .welcome_farewell import *
-from .group_management import *
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
+from app.scripts.GroupManager.banned_words import *
+from app.scripts.GroupManager.group_status import *
+from app.scripts.GroupManager.invite_chain import *
+from app.scripts.GroupManager.welcome_farewell import *
+from app.scripts.GroupManager.group_management import *
+
+
 from app.api import *
 from app.config import owner_id
 
-sys.path.append(
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    )
-)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
