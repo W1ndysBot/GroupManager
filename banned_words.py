@@ -58,6 +58,13 @@ async def check_banned_words(websocket, group_id, msg):
     ):
         return False
 
+    if f"\\u[0-9a-fA-F]{4}" in msg.get("raw_message"):
+        warning_message = "检测到消息中有不可见字符，请不要发送违禁词！"
+        await send_group_msg(websocket, group_id, warning_message)
+        user_id = msg["sender"]["user_id"]
+        await set_group_ban(websocket, group_id, user_id, 60)
+        return True
+
     banned_words = load_banned_words(group_id)
     raw_message = msg["raw_message"]
 
