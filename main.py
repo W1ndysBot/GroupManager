@@ -72,10 +72,12 @@ async def is_group_admin(role):
 
 
 async def handle_group_notice(websocket, msg):
-    operator_id = msg["operator_id"]
-    sub_type = msg["sub_type"]
-    user_id = msg["user_id"]
-    group_id = msg["group_id"]
+
+    # 使用get函数安全的获取参数，以防不存在导致跳出异常
+    operator_id = msg.get("operator_id", "")
+    sub_type = msg.get("sub_type", "")
+    user_id = msg.get("user_id", "")
+    group_id = msg.get("group_id", "")
 
     if msg["notice_type"] == "group_increase":
         await handle_welcome_message(websocket, group_id, user_id)
@@ -101,9 +103,11 @@ async def handle_group_message(websocket, msg):
         role = msg["sender"]["role"]
         message_id = int(msg["message_id"])
 
-        is_admin = await is_group_admin(role)
-        is_owner = await is_group_owner(role)
-        is_authorized = (is_admin or is_owner) or (user_id in owner_id)
+        is_admin = await is_group_admin(role)  # 是否是群管理员
+        is_owner = await is_group_owner(role)  # 是否是群主
+        is_authorized = (is_admin or is_owner) or (
+            user_id in owner_id
+        )  # 是否是群主或管理员或root管理员
 
         if (
             raw_message == "群管系统"
@@ -293,8 +297,7 @@ async def handle_group_message(websocket, msg):
             await send_group_msg(websocket, group_id, status_message)
 
         # 前面执行完所有命令之后，检查违禁词
-        if await check_banned_words(websocket, group_id, msg):
-            return
+        await check_banned_words(websocket, group_id, msg)
 
     except Exception as e:
         logging.error(f"处理群消息时出错: {e}")

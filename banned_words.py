@@ -1,21 +1,24 @@
 import json
 import os
-
 from .group_status import load_status, save_status
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 from app.api import send_group_msg, delete_msg, set_group_ban
+from app.config import owner_id
 
 
+# 是否是群主
 async def is_group_owner(role):
     return role == "owner"
 
 
+# 是否是管理员
 async def is_group_admin(role):
     return role == "admin"
 
 
-async def is_authorized(user_id, role, owner_id):
+# 是否是管理员或群主或root管理员
+async def is_authorized(role, user_id):
     is_admin = await is_group_admin(role)
     is_owner = await is_group_owner(role)
     return (is_admin or is_owner) or (user_id in owner_id)
@@ -46,7 +49,7 @@ def save_banned_words_status(group_id, status):
 
 async def check_banned_words(websocket, group_id, msg):
     if not load_banned_words_status(group_id) or await is_authorized(
-        msg["sender"]["user_id"], msg["sender"]["role"], msg["sender"]["user_id"]
+        msg["sender"]["role"], msg["sender"]["user_id"]
     ):
         return False
 
