@@ -18,7 +18,10 @@ from app.api import *
 from app.config import owner_id
 
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data/GroupManager",
+)
 
 
 async def show_menu(websocket, group_id):

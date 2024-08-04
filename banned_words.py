@@ -2,7 +2,12 @@ import json
 import os
 from .group_status import load_status, save_status
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data",
+    "GroupManager",
+)
 from app.api import send_group_msg, delete_msg, set_group_ban
 from app.config import owner_id
 
