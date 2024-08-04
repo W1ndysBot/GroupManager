@@ -14,5 +14,13 @@
         "farewell_status": true,
         "banned_words_status": true,
         "video_check_status": true
+    },
+    {
+        "group_id": 497554955,
+        "invite_chain_status": true,
+        "welcome_status": true,
+        "farewell_status": true,
+        "banned_words_status": true,
+        "video_check_status": true
     }
 ]
