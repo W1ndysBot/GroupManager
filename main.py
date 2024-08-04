@@ -23,8 +23,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
 async def show_menu(websocket, group_id):
-    menu_message = """
-群管系统菜单:
+    menu_message = """群管系统菜单:
 违禁词管理:
 - 添加违禁词: add_banned_word 违禁词 或 添加违禁词 违禁词
 - 移除违禁词: remove_banned_word 违禁词 或 移除违禁词 违禁词
@@ -58,8 +57,7 @@ async def show_menu(websocket, group_id):
 - 关闭视频检测: disable_video_check 或 关闭视频检测
 
 群状态查看:
-- 查看群内所有状态开关情况: view_group_status 或 查看群状态
-    """
+- 查看群内所有状态开关情况: view_group_status 或 查看群状态"""
     await send_group_msg(websocket, group_id, menu_message)
 
 
