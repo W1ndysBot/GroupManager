@@ -61,10 +61,10 @@ async def check_banned_words(websocket, group_id, msg):
 
     # 使用正则表达式检测文本中是否包含任何不可见字符
     if re.search(r"[\u200b\u200c\u200d\u200e\u200f\ufeff]", msg.get("raw_message")):
-        warning_message = "检测到消息中有不可见字符，请不要发送违禁词！"
+        warning_message = "检测到消息中有不可见字符，已撤回"
         await send_group_msg(websocket, group_id, warning_message)
-        user_id = msg["sender"]["user_id"]
-        await set_group_ban(websocket, group_id, user_id, 60)
+        message_id = int(msg["message_id"])
+        await delete_msg(websocket, message_id)
         return True
 
     banned_words = load_banned_words(group_id)
