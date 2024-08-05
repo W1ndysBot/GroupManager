@@ -88,7 +88,7 @@ async def handle_group_notice(websocket, msg):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"已记录 [CQ:at,qq={user_id}] 的邀请链，邀请者为 [CQ:at,qq={operator_id}] ，请勿在群内发送违规信息",
+                f"已记录 [CQ:at,qq={user_id}] 的邀请链，操作者为 [CQ:at,qq={operator_id}] ，请勿在群内发送违规信息",
             )
 
     if msg["notice_type"] == "group_decrease":
