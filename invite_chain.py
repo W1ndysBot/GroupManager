@@ -23,7 +23,9 @@ def save_invite_chain_status(group_id, status):
 def load_invite_chain(group_id):
     try:
         with open(
-            f"{DATA_DIR}/invite_chain_{group_id}.json", "r", encoding="utf-8"
+            os.path.join(DATA_DIR, f"invite_chain_{group_id}.json"),
+            "r",
+            encoding="utf-8",
         ) as f:
             return json.load(f)
     except FileNotFoundError:
@@ -43,10 +45,17 @@ async def view_invite_chain(websocket, group_id, target_user_id):
     def find_invite_chain(target_user_id, chain, visited):
         for inviter in invite_chain:
             if (
+                inviter["operator_id"] == target_user_id
+                and inviter["user_id"] not in visited
+            ):
+                chain.append({"type": "主动邀请", **inviter})
+                visited.add(inviter["user_id"])
+                find_invite_chain(inviter["user_id"], chain, visited)
+            elif (
                 inviter["user_id"] == target_user_id
                 and inviter["user_id"] not in visited
             ):
-                chain.append(inviter)
+                chain.append({"type": "被动邀请", **inviter})
                 visited.add(inviter["user_id"])
                 find_invite_chain(inviter["operator_id"], chain, visited)
 
@@ -57,7 +66,7 @@ async def view_invite_chain(websocket, group_id, target_user_id):
     if chain:
         invite_chain_message = "邀请链:\n\n"
         for inviter in chain:
-            invite_chain_message += f"【{inviter['operator_id']}】邀请了【{inviter['user_id']}】\n邀请时间：{inviter['date']}\n\n"
+            invite_chain_message += f"【{inviter['operator_id']}】邀请了【{inviter['user_id']}】（{inviter['type']}）\n邀请时间：{inviter['date']}\n\n"
     else:
         invite_chain_message = "没有找到相关的邀请链。"
 
@@ -77,5 +86,7 @@ async def save_invite_chain(group_id, user_id, operator_id):
         }
     )
 
-    with open(f"{DATA_DIR}/invite_chain_{group_id}.json", "w", encoding="utf-8") as f:
+    with open(
+        os.path.join(DATA_DIR, f"invite_chain_{group_id}.json"), "w", encoding="utf-8"
+    ) as f:
         json.dump(invite_chain, f, ensure_ascii=False, indent=4)
