@@ -71,7 +71,8 @@ async def check_banned_words(websocket, group_id, msg):
     raw_message = msg["raw_message"]
 
     for word in banned_words:
-        if word in raw_message:
+        # 检查是否为正则表达式
+        if re.search(word, raw_message):
             message_id = int(msg["message_id"])
             await delete_msg(websocket, message_id)
             warning_message = f"""警告：请不要发送违禁词！
