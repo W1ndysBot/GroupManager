@@ -71,7 +71,7 @@ async def is_group_admin(role):
     return role == "admin"
 
 
-async def handle_group_notice(websocket, msg):
+async def handle_GroupManager_group_notice(websocket, msg):
 
     # 使用get函数安全的获取参数，以防不存在导致跳出异常
     operator_id = msg.get("operator_id", "")
@@ -95,7 +95,7 @@ async def handle_group_notice(websocket, msg):
         await handle_farewell_message(websocket, group_id, user_id, sub_type)
 
 
-async def handle_group_message(websocket, msg):
+async def handle_GroupManager_group_message(websocket, msg):
     try:
         user_id = msg["user_id"]
         group_id = msg["group_id"]
