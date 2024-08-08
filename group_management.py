@@ -9,7 +9,7 @@ from app.api import send_group_msg, set_group_ban, get_group_member_list
 
 async def banme_random_time(websocket, group_id, user_id):
     logging.info(f"执行禁言自己随机时间")
-    ban_time = random.randint(1, 600)
+    ban_time = random.randint(1, 2592000)
     await set_group_ban(websocket, group_id, user_id, ban_time)
     logging.info(f"禁言{user_id} {ban_time} 秒。")
 
