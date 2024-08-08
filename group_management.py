@@ -26,7 +26,7 @@ async def banme_random_time(websocket, group_id, user_id):
     logging.info(f"禁言{user_id} {ban_time} 秒。")
 
 
-# 加载禁言记录
+# 加载banyou禁言记录
 def load_ban_records(group_id):
     if os.path.exists(os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json")):
         with open(
@@ -42,20 +42,25 @@ def load_ban_records(group_id):
     return {}
 
 
-# 保存禁言记录
+# 保存banyou禁言记录
 def save_ban_records(records, group_id):
     with open(os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json"), "w") as f:
         json.dump(records, f, indent=4)  # 添加 indent 参数进行格式化
 
 
 # 指定禁言一个人
-async def ban_somebody(websocket, user_id, group_id, message):
+async def ban_somebody(websocket, user_id, group_id, message, self_id):
+
+    if self_id == user_id:
+        asyncio.create_task(send_group_msg(websocket, group_id, "禁我干什么！"))
+        return
+
     ban_qq = None
     ban_duration = None
-    for i, item in enumerate(message):
-        if item["type"] == "at":
-            ban_qq = item["data"]["qq"]
-            ban_duration = 60
+    ban_qq = next(
+        (item["data"]["qq"] for item in message if item["type"] == "at"), None
+    )
+    ban_duration = 60 if ban_qq else None
 
     if ban_qq and ban_duration:
         records = load_ban_records(group_id)
@@ -76,7 +81,8 @@ async def ban_somebody(websocket, user_id, group_id, message):
         asyncio.create_task(set_group_ban(websocket, group_id, ban_qq, ban_duration))
 
 
-async def ban_user(websocket, group_id, message):
+async def ban_user(websocket, group_id, message, self_id):
+
     ban_qq = None
     ban_duration = None
     for i, item in enumerate(message):
@@ -87,6 +93,11 @@ async def ban_user(websocket, group_id, message):
             else:
                 ban_duration = 60
     if ban_qq and ban_duration:
+
+        if self_id == ban_qq:
+            asyncio.create_task(send_group_msg(websocket, group_id, "禁我干什么！"))
+            return
+
         await set_group_ban(websocket, group_id, ban_qq, ban_duration)
 
 

@@ -100,6 +100,7 @@ async def handle_GroupManager_group_message(websocket, msg):
         raw_message = msg["raw_message"]
         role = msg["sender"]["role"]
         message_id = int(msg["message_id"])
+        self_id = str(msg.get("self_id", ""))  # 机器人QQ，转为字符串方便操作
 
         is_admin = is_group_admin(role)  # 是否是群管理员
         is_owner = is_group_owner(role)  # 是否是群主
@@ -136,10 +137,15 @@ async def handle_GroupManager_group_message(websocket, msg):
             or re.match(r"踢.*", raw_message)
         ):
             kick_qq = None
-            for i, item in enumerate(msg["message"]):
-                if item["type"] == "at":
-                    kick_qq = item["data"]["qq"]
-                    break
+            kick_qq = next(
+                (item["data"]["qq"] for item in msg["message"] if item["type"] == "at"),
+                None,
+            )
+
+            if kick_qq == self_id:
+                asyncio.create_task(send_group_msg(websocket, group_id, "踢我干什么！"))
+                return
+
             if kick_qq:
                 asyncio.create_task(set_group_kick(websocket, group_id, kick_qq))
 
@@ -147,8 +153,9 @@ async def handle_GroupManager_group_message(websocket, msg):
 
             # 指定禁言一个人
             if re.match(r"banyou.*", raw_message):
+
                 asyncio.create_task(
-                    ban_somebody(websocket, user_id, group_id, msg["message"])
+                    ban_somebody(websocket, user_id, group_id, msg["message"], self_id)
                 )
                 return
 
@@ -167,7 +174,8 @@ async def handle_GroupManager_group_message(websocket, msg):
             if (
                 re.match(r"ban.*", raw_message) or re.match(r"禁言.*", raw_message)
             ) and is_authorized:
-                asyncio.create_task(ban_user(websocket, group_id, msg["message"]))
+
+                asyncio.create_task(ban_user(websocket, group_id, msg["message"],self_id))
 
         if (
             re.match(r"unban.*", raw_message) or re.match(r"解禁.*", raw_message)
