@@ -7,7 +7,6 @@ import asyncio
 import json
 from datetime import datetime
 
-from click import group
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.api import send_group_msg, set_group_ban, get_group_member_list
