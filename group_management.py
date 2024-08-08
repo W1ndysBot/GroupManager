@@ -46,7 +46,7 @@ def load_ban_records(group_id):
 # 保存禁言记录
 def save_ban_records(records, group_id):
     with open(os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json"), "w") as f:
-        json.dump(records, f)
+        json.dump(records, f, indent=4)  # 添加 indent 参数进行格式化
 
 
 # 指定禁言一个人
