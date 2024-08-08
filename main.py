@@ -95,8 +95,8 @@ async def handle_GroupManager_group_message(websocket, msg):
         role = msg["sender"]["role"]
         message_id = int(msg["message_id"])
 
-        is_admin = await is_group_admin(role)  # 是否是群管理员
-        is_owner = await is_group_owner(role)  # 是否是群主
+        is_admin = is_group_admin(role)  # 是否是群管理员
+        is_owner = is_group_owner(role)  # 是否是群主
         is_authorized = (is_admin or is_owner) or (
             user_id in owner_id
         )  # 是否是群主或管理员或root管理员
