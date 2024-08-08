@@ -145,7 +145,7 @@ async def handle_GroupManager_group_message(websocket, msg):
         if re.match(r"ban.*", raw_message):
 
             # 指定禁言一个人
-            if (re.match(r"banyou.*", raw_message)) and is_authorized:
+            if re.match(r"banyou.*", raw_message):
                 asyncio.create_task(
                     ban_somebody(websocket, user_id, group_id, msg["message"])
                 )
