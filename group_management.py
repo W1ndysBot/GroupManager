@@ -1,10 +1,23 @@
+from asyncio import create_task
 import random
 import logging
 import sys
 import os
+import asyncio
+import json
+from datetime import datetime
+
+from click import group
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.api import send_group_msg, set_group_ban, get_group_member_list
+
+
+BAN_RECORDS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data",
+    "GroupManager",
+)
 
 
 async def banme_random_time(websocket, group_id, user_id):
@@ -12,6 +25,56 @@ async def banme_random_time(websocket, group_id, user_id):
     ban_time = random.randint(1, 2592000)
     await set_group_ban(websocket, group_id, user_id, ban_time)
     logging.info(f"禁言{user_id} {ban_time} 秒。")
+
+
+# 加载禁言记录
+def load_ban_records(group_id):
+    if os.path.exists(os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json")):
+        with open(
+            os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json"), "r"
+        ) as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                logging.error(
+                    f"JSONDecodeError: 文件 ban_records_{group_id}.json 为空或格式错误。"
+                )
+                return {}
+    return {}
+
+
+# 保存禁言记录
+def save_ban_records(records, group_id):
+    with open(os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json"), "w") as f:
+        json.dump(records, f)
+
+
+# 指定禁言一个人
+async def ban_somebody(websocket, user_id, group_id, message):
+    ban_qq = None
+    ban_duration = None
+    for i, item in enumerate(message):
+        if item["type"] == "at":
+            ban_qq = item["data"]["qq"]
+            ban_duration = 60
+
+    if ban_qq and ban_duration:
+        records = load_ban_records(group_id)
+        today = datetime.now().strftime("%Y-%m-%d")
+        if ban_qq in records and records[ban_qq] == today:
+            logging.info(f"用户 {ban_qq} 今天已经被禁言过了。")
+            asyncio.create_task(
+                send_group_msg(
+                    websocket,
+                    group_id,
+                    f"[CQ:at,qq={user_id}] 你今天已经ban过别人一次了，还想ban？[CQ:face,id=14]。",
+                )
+            )
+            return
+
+        records[user_id] = today
+        save_ban_records(records, group_id)
+        asyncio.create_task(set_group_ban(websocket, group_id, ban_qq, ban_duration))
 
 
 async def ban_user(websocket, group_id, message):

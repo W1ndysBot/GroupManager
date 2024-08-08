@@ -2,6 +2,7 @@ import logging
 import re
 import os
 import sys
+import asyncio
 
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -60,7 +61,7 @@ async def show_menu(websocket, group_id):
 
 群状态查看:
 - 查看群内所有状态开关情况: view_group_status 或 查看群状态"""
-    await send_group_msg(websocket, group_id, menu_message)
+    await asyncio.create_task(send_group_msg(websocket, group_id, menu_message))
 
 
 async def handle_GroupManager_group_notice(websocket, msg):
@@ -72,19 +73,23 @@ async def handle_GroupManager_group_notice(websocket, msg):
     group_id = msg.get("group_id", "")
 
     if msg["notice_type"] == "group_increase":
-        await handle_welcome_message(websocket, group_id, user_id)
+        asyncio.create_task(handle_welcome_message(websocket, group_id, user_id))
         if (sub_type == "invite" or sub_type == "approve") and load_invite_chain_status(
             group_id
         ):
-            await save_invite_chain(group_id, user_id, operator_id)
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"已记录 [CQ:at,qq={user_id}] 的邀请链，操作者为 [CQ:at,qq={operator_id}] ，请勿在群内发送违规信息",
+            asyncio.create_task(save_invite_chain(group_id, user_id, operator_id))
+            asyncio.create_task(
+                send_group_msg(
+                    websocket,
+                    group_id,
+                    f"已记录 [CQ:at,qq={user_id}] 的邀请链，操作者为 [CQ:at,qq={operator_id}] ，请勿在群内发送违规信息",
+                )
             )
 
     if msg["notice_type"] == "group_decrease":
-        await handle_farewell_message(websocket, group_id, user_id, sub_type)
+        asyncio.create_task(
+            handle_farewell_message(websocket, group_id, user_id, sub_type)
+        )
 
 
 async def handle_GroupManager_group_message(websocket, msg):
@@ -111,15 +116,17 @@ async def handle_GroupManager_group_message(websocket, msg):
         if is_authorized and (raw_message == "测试" or raw_message == "test"):
             logging.info("收到管理员的测试消息。")
             if raw_message == "测试":
-                await send_group_msg(websocket, group_id, "测试成功")
+                asyncio.create_task(send_group_msg(websocket, group_id, "测试成功"))
             elif raw_message == "test":
-                await send_group_msg(websocket, group_id, "Test successful")
+                asyncio.create_task(
+                    send_group_msg(websocket, group_id, "Test successful")
+                )
 
         if raw_message == "全员禁言" or raw_message == "mute_all" and is_authorized:
-            await set_group_whole_ban(websocket, group_id, True)
+            asyncio.create_task(set_group_whole_ban(websocket, group_id, True))
 
         if raw_message == "全员解禁" or raw_message == "unmute_all" and is_authorized:
-            await set_group_whole_ban(websocket, group_id, False)
+            asyncio.create_task(set_group_whole_ban(websocket, group_id, False))
 
         if is_authorized and (
             re.match(r"kick.*", raw_message)
@@ -132,28 +139,42 @@ async def handle_GroupManager_group_message(websocket, msg):
                     kick_qq = item["data"]["qq"]
                     break
             if kick_qq:
-                await set_group_kick(websocket, group_id, kick_qq)
+                asyncio.create_task(set_group_kick(websocket, group_id, kick_qq))
 
         if re.match(r"ban.*", raw_message):
+
+            # 指定禁言一个人
+            if (re.match(r"banyou.*", raw_message)) and is_authorized:
+                asyncio.create_task(
+                    ban_somebody(websocket, user_id, group_id, msg["message"])
+                )
+                return
+
             if raw_message == "banme" or raw_message == "禁言我":
-                await banme_random_time(websocket, group_id, user_id)
-            if (
-                re.match(r"ban.*", raw_message) or re.match(r"禁言.*", raw_message)
-            ) and is_authorized:
-                await ban_user(websocket, group_id, msg["message"])
+                asyncio.create_task(banme_random_time(websocket, group_id, user_id))
+                return
+
             if (
                 raw_message == "banrandom" or raw_message == "随机禁言"
             ) and is_authorized:
-                await ban_random_user(websocket, group_id, msg["message"])
+                asyncio.create_task(
+                    ban_random_user(websocket, group_id, msg["message"])
+                )
+                return
+
+            if (
+                re.match(r"ban.*", raw_message) or re.match(r"禁言.*", raw_message)
+            ) and is_authorized:
+                asyncio.create_task(ban_user(websocket, group_id, msg["message"]))
 
         if (
             re.match(r"unban.*", raw_message) or re.match(r"解禁.*", raw_message)
         ) and is_authorized:
-            await unban_user(websocket, group_id, msg["message"])
+            asyncio.create_task(unban_user(websocket, group_id, msg["message"]))
 
         if "recall" in raw_message or "撤回" in raw_message and is_authorized:
             message_id = int(msg["message"][0]["data"]["id"])
-            await delete_msg(websocket, message_id)
+            asyncio.create_task(delete_msg(websocket, message_id))
 
         if is_authorized:
             if raw_message.startswith("add_banned_word ") or raw_message.startswith(
@@ -164,8 +185,8 @@ async def handle_GroupManager_group_message(websocket, msg):
                 if new_word not in banned_words:
                     banned_words.append(new_word)
                     save_banned_words(group_id, banned_words)
-                    await send_group_msg(
-                        websocket, group_id, f"已添加违禁词: {new_word}"
+                    asyncio.create_task(
+                        send_group_msg(websocket, group_id, f"已添加违禁词: {new_word}")
                     )
             elif raw_message.startswith(
                 "remove_banned_word "
@@ -175,78 +196,106 @@ async def handle_GroupManager_group_message(websocket, msg):
                 if remove_word in banned_words:
                     banned_words.remove(remove_word)
                     save_banned_words(group_id, banned_words)
-                    await send_group_msg(
-                        websocket, group_id, f"已移除违禁词: {remove_word}"
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket, group_id, f"已移除违禁词: {remove_word}"
+                        )
                     )
             elif raw_message == "list_banned_words" or raw_message == "查看违禁词":
-                await list_banned_words(websocket, group_id)
+                asyncio.create_task(list_banned_words(websocket, group_id))
 
         if is_authorized:
             if raw_message == "enable_banned_words" or raw_message == "开启违禁词检测":
                 if load_banned_words_status(group_id):
-                    await send_group_msg(
-                        websocket, group_id, "违禁词检测已经开启了，无需重复开启。"
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket, group_id, "违禁词检测已经开启了，无需重复开启。"
+                        )
                     )
                 else:
                     save_banned_words_status(group_id, True)
-                    await send_group_msg(websocket, group_id, "已开启违禁词检测。")
+                    asyncio.create_task(
+                        send_group_msg(websocket, group_id, "已开启违禁词检测。")
+                    )
             elif (
                 raw_message == "disable_banned_words" or raw_message == "关闭违禁词检测"
             ):
                 if not load_banned_words_status(group_id):
-                    await send_group_msg(
-                        websocket, group_id, "违禁词检测已经关闭了，无需重复关闭。"
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket, group_id, "违禁词检测已经关闭了，无需重复关闭。"
+                        )
                     )
                 else:
                     save_banned_words_status(group_id, False)
-                    await send_group_msg(websocket, group_id, "已关闭违禁词检测。")
+                    asyncio.create_task(
+                        send_group_msg(websocket, group_id, "已关闭违禁词检测。")
+                    )
 
         if is_authorized:
             if raw_message == "enable_welcome_message" or raw_message == "开启入群欢迎":
                 if load_welcome_status(group_id):
-                    await send_group_msg(
-                        websocket,
-                        group_id,
-                        "入群欢迎和退群欢送已经开启了，无需重复开启。",
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket,
+                            group_id,
+                            "入群欢迎和退群欢送已经开启了，无需重复开启。",
+                        )
                     )
                 else:
                     save_welcome_status(group_id, True)
-                    await send_group_msg(
-                        websocket, group_id, "已开启入群欢迎和退群欢送。"
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket, group_id, "已开启入群欢迎和退群欢送。"
+                        )
                     )
             elif (
                 raw_message == "disable_welcome_message"
                 or raw_message == "关闭入群欢迎"
             ):
                 if not load_welcome_status(group_id):
-                    await send_group_msg(
-                        websocket,
-                        group_id,
-                        "入群欢迎和退群欢送已经关闭了，无需重复关闭。",
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket,
+                            group_id,
+                            "入群欢迎和退群欢送已经关闭了，无需重复关闭。",
+                        )
                     )
                 else:
                     save_welcome_status(group_id, False)
-                    await send_group_msg(
-                        websocket, group_id, "已关闭入群欢迎和退群欢送。"
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket, group_id, "已关闭入群欢迎和退群欢送。"
+                        )
                     )
 
         if is_authorized:
             if raw_message == "enable_invite_chain" or raw_message == "开启邀请链":
                 if load_invite_chain_status(group_id):
-                    await send_group_msg(
-                        websocket, group_id, "邀请链功能已经开启过了，无需重复开启。"
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket,
+                            group_id,
+                            "邀请链功能已经开启过了，无需重复开启。",
+                        )
                     )
                 else:
                     save_invite_chain_status(group_id, True)
-                    await send_group_msg(websocket, group_id, "已开启邀请链功能。")
+                    asyncio.create_task(
+                        send_group_msg(websocket, group_id, "已开启邀请链功能。")
+                    )
             elif raw_message == "disable_invite_chain" or raw_message == "关闭邀请链":
                 if not load_invite_chain_status(group_id):
-                    await send_group_msg(
-                        websocket, group_id, "邀请链功能已经关闭了，无需重复关闭。"
+                    asyncio.create_task(
+                        send_group_msg(
+                            websocket, group_id, "邀请链功能已经关闭了，无需重复关闭。"
+                        )
                     )
                 else:
                     save_invite_chain_status(group_id, False)
-                    await send_group_msg(websocket, group_id, "已关闭邀请链功能。")
+                    asyncio.create_task(
+                        send_group_msg(websocket, group_id, "已关闭邀请链功能。")
+                    )
 
         if raw_message.startswith("view_invite_chain ") or raw_message.startswith(
             "查看邀请链 "
