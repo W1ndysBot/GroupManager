@@ -39,6 +39,7 @@ async def show_menu(websocket, group_id):
 - 禁言指定用户: ban @用户 60 或 禁言 @用户 60
 - 随机禁言一个用户: banrandom 或 随机禁言
 - 解禁指定用户: unban @用户 或 解禁 @用户
+- 禁言一个你看着不爽的: banyou@用户
 
 群管理:
 - 开启全员禁言: 全员禁言 或 mute_all
