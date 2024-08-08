@@ -125,9 +125,10 @@ async def handle_GroupManager_group_message(websocket, msg):
 
         if raw_message == "全员禁言" or raw_message == "banall" and is_authorized:
             asyncio.create_task(set_group_whole_ban(websocket, group_id, True))
-
+            return
         if raw_message == "全员解禁" or raw_message == "unbanall" and is_authorized:
             asyncio.create_task(set_group_whole_ban(websocket, group_id, False))
+            return
 
         if is_authorized and (
             re.match(r"kick.*", raw_message)
