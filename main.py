@@ -63,14 +63,6 @@ async def show_menu(websocket, group_id):
     await send_group_msg(websocket, group_id, menu_message)
 
 
-async def is_group_owner(role):
-    return role == "owner"
-
-
-async def is_group_admin(role):
-    return role == "admin"
-
-
 async def handle_GroupManager_group_notice(websocket, msg):
 
     # 使用get函数安全的获取参数，以防不存在导致跳出异常
