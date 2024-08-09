@@ -28,10 +28,9 @@ async def banme_random_time(websocket, group_id, user_id):
 
 # 加载banyou禁言记录
 def load_ban_records(group_id):
-    if os.path.exists(os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json")):
-        with open(
-            os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json"), "r"
-        ) as f:
+    file_path = os.path.join(BAN_RECORDS, f"ban_records_{group_id}.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r") as f:
             try:
                 return json.load(f)
             except json.JSONDecodeError:
@@ -43,17 +42,18 @@ def load_ban_records(group_id):
 
 
 # 保存banyou禁言记录
-def save_ban_records(records, group_id):
-    with open(os.path.join(f"{BAN_RECORDS}", f"ban_records_{group_id}.json"), "w") as f:
+def save_ban_records(user_id, group_id):
+    records = load_ban_records(group_id)
+
+    # 更新禁言记录
+    records[user_id] = datetime.now().strftime("%Y-%m-%d")
+
+    with open(os.path.join(BAN_RECORDS, f"ban_records_{group_id}.json"), "w") as f:
         json.dump(records, f, indent=4)  # 添加 indent 参数进行格式化
 
 
 # 指定禁言一个人
 async def ban_somebody(websocket, user_id, group_id, message, self_id):
-
-    if self_id == user_id:
-        asyncio.create_task(send_group_msg(websocket, group_id, "禁我干什么！"))
-        return
 
     ban_qq = None
     ban_duration = None
@@ -63,10 +63,14 @@ async def ban_somebody(websocket, user_id, group_id, message, self_id):
     ban_duration = 60 if ban_qq else None
 
     if ban_qq and ban_duration:
+
+        if ban_qq == self_id:
+            asyncio.create_task(send_group_msg(websocket, group_id, "禁我干什么！"))
+            return
+
         records = load_ban_records(group_id)
         today = datetime.now().strftime("%Y-%m-%d")
-        if ban_qq in records and records[ban_qq] == today:
-            logging.info(f"用户 {ban_qq} 今天已经被禁言过了。")
+        if str(user_id) in records and records[str(user_id)] == today:
             asyncio.create_task(
                 send_group_msg(
                     websocket,
@@ -76,8 +80,7 @@ async def ban_somebody(websocket, user_id, group_id, message, self_id):
             )
             return
 
-        records[user_id] = today
-        save_ban_records(records, group_id)
+        save_ban_records(user_id, group_id)
         asyncio.create_task(set_group_ban(websocket, group_id, ban_qq, ban_duration))
 
 
