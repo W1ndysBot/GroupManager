@@ -28,11 +28,11 @@ DATA_DIR = os.path.join(
 async def show_menu(websocket, group_id):
     menu_message = """群管系统菜单:
 违禁词管理:
-- 添加违禁词: add_banned_word 违禁词 或 添加违禁词 违禁词
-- 移除违禁词: remove_banned_word 违禁词 或 移除违禁词 违禁词
-- 查看违禁词列表: list_banned_words 或 查看违禁词
-- 开启违禁词检测: enable_banned_words 或 开启违禁词检测
-- 关闭违禁词检测: disable_banned_words 或 关闭违禁词检测
+- 添加违禁词: add ban word 违禁词 或 添加违禁词 违禁词
+- 删除违禁词: rm ban word 违禁词 或 删除违禁词 违禁词
+- 查看违禁词列表: list ban words 或 查看违禁词
+- 开启违禁词检测: on ban words 或 开启违禁词检测
+- 关闭违禁词检测: off ban words 或 关闭违禁词检测
 
 禁言管理:
 - 禁言自己随机时间: banme 或 禁言我
@@ -175,7 +175,9 @@ async def handle_GroupManager_group_message(websocket, msg):
                 re.match(r"ban.*", raw_message) or re.match(r"禁言.*", raw_message)
             ) and is_authorized:
 
-                asyncio.create_task(ban_user(websocket, group_id, msg["message"],self_id))
+                asyncio.create_task(
+                    ban_user(websocket, group_id, msg["message"], self_id)
+                )
 
         if (
             re.match(r"unban.*", raw_message) or re.match(r"解禁.*", raw_message)
@@ -187,7 +189,7 @@ async def handle_GroupManager_group_message(websocket, msg):
             asyncio.create_task(delete_msg(websocket, message_id))
 
         if is_authorized:
-            if raw_message.startswith("add_banned_word ") or raw_message.startswith(
+            if raw_message.startswith("add ban word ") or raw_message.startswith(
                 "添加违禁词 "
             ):
                 new_word = raw_message.split(" ", 1)[1].strip()
@@ -198,9 +200,9 @@ async def handle_GroupManager_group_message(websocket, msg):
                     asyncio.create_task(
                         send_group_msg(websocket, group_id, f"已添加违禁词: {new_word}")
                     )
-            elif raw_message.startswith(
-                "remove_banned_word "
-            ) or raw_message.startswith("移除违禁词 "):
+            elif raw_message.startswith("rm ban word ") or raw_message.startswith(
+                "删除违禁词 "
+            ):
                 remove_word = raw_message.split(" ", 1)[1].strip()
                 banned_words = load_banned_words(group_id)
                 if remove_word in banned_words:
@@ -208,14 +210,14 @@ async def handle_GroupManager_group_message(websocket, msg):
                     save_banned_words(group_id, banned_words)
                     asyncio.create_task(
                         send_group_msg(
-                            websocket, group_id, f"已移除违禁词: {remove_word}"
+                            websocket, group_id, f"已删除违禁词: {remove_word}"
                         )
                     )
-            elif raw_message == "list_banned_words" or raw_message == "查看违禁词":
+            elif raw_message == "list ban words" or raw_message == "查看违禁词":
                 asyncio.create_task(list_banned_words(websocket, group_id))
 
         if is_authorized:
-            if raw_message == "enable_banned_words" or raw_message == "开启违禁词检测":
+            if raw_message == "on ban words" or raw_message == "开启违禁词检测":
                 if load_banned_words_status(group_id):
                     asyncio.create_task(
                         send_group_msg(
@@ -227,9 +229,7 @@ async def handle_GroupManager_group_message(websocket, msg):
                     asyncio.create_task(
                         send_group_msg(websocket, group_id, "已开启违禁词检测。")
                     )
-            elif (
-                raw_message == "disable_banned_words" or raw_message == "关闭违禁词检测"
-            ):
+            elif raw_message == "off ban words" or raw_message == "关闭违禁词检测":
                 if not load_banned_words_status(group_id):
                     asyncio.create_task(
                         send_group_msg(
