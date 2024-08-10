@@ -65,23 +65,21 @@ async def ban_somebody(websocket, user_id, group_id, message, self_id):
     if ban_qq and ban_duration:
 
         if ban_qq == self_id:
-            asyncio.create_task(send_group_msg(websocket, group_id, "禁我干什么！"))
+            await send_group_msg(websocket, group_id, "禁我干什么！")
             return
 
         records = load_ban_records(group_id)
         today = datetime.now().strftime("%Y-%m-%d")
         if str(user_id) in records and records[str(user_id)] == today:
-            asyncio.create_task(
-                send_group_msg(
-                    websocket,
-                    group_id,
-                    f"[CQ:at,qq={user_id}] 你今天已经ban过别人一次了，还想ban？[CQ:face,id=14]。",
-                )
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:at,qq={user_id}] 你今天已经ban过别人一次了，还想ban？[CQ:face,id=14]。",
             )
             return
 
         save_ban_records(user_id, group_id)
-        asyncio.create_task(set_group_ban(websocket, group_id, ban_qq, ban_duration))
+        await set_group_ban(websocket, group_id, ban_qq, ban_duration)
 
 
 async def ban_user(websocket, group_id, message, self_id):
@@ -98,7 +96,7 @@ async def ban_user(websocket, group_id, message, self_id):
     if ban_qq and ban_duration:
 
         if self_id == ban_qq:
-            asyncio.create_task(send_group_msg(websocket, group_id, "禁我干什么！"))
+            await send_group_msg(websocket, group_id, "禁我干什么！")
             return
 
         await set_group_ban(websocket, group_id, ban_qq, ban_duration)
