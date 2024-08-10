@@ -27,12 +27,6 @@ DATA_DIR = os.path.join(
 
 async def show_menu(websocket, group_id):
     menu_message = """群管系统菜单:
-违禁词管理:
-- 添加违禁词: add ban word 违禁词 或 添加违禁词 违禁词
-- 删除违禁词: rm ban word 违禁词 或 删除违禁词 违禁词
-- 查看违禁词列表: list ban words 或 查看违禁词
-- 开启违禁词检测: on ban words 或 开启违禁词检测
-- 关闭违禁词检测: off ban words 或 关闭违禁词检测
 
 禁言管理:
 - 禁言自己随机时间: banme 或 禁言我
@@ -40,28 +34,14 @@ async def show_menu(websocket, group_id):
 - 随机禁言一个用户: banrandom 或 随机禁言
 - 解禁指定用户: unban @用户 或 解禁 @用户
 - 禁言一个你看着不爽的: banyou@用户
-
-群管理:
 - 开启全员禁言: 全员禁言 或 mute_all
 - 关闭全员禁言: 全员解禁 或 unmute_all
 - 踢出指定用户: kick @用户 或 踢 @用户
 - 撤回消息: recall 或 撤回
 
-欢迎和欢送:
-- 开启入群欢迎和退群欢送: enable_welcome_message 或 开启入群欢迎
-- 关闭入群欢迎和退群欢送: disable_welcome_message 或 关闭入群欢迎
-
-邀请链管理:
-- 开启邀请链功能: enable_invite_chain 或 开启邀请链
-- 关闭邀请链功能: disable_invite_chain 或 关闭邀请链
-- 查看指定用户的邀请链: view_invite_chain 用户ID 或 查看邀请链 用户ID
-
 视频检测管理:
 - 开启视频检测: enable_video_check 或 开启视频检测
-- 关闭视频检测: disable_video_check 或 关闭视频检测
-
-群状态查看:
-- 查看群内所有状态开关情况: view_group_status 或 查看群状态"""
+- 关闭视频检测: disable_video_check 或 关闭视频检测"""
     await asyncio.create_task(send_group_msg(websocket, group_id, menu_message))
 
 
@@ -188,59 +168,6 @@ async def handle_GroupManager_group_message(websocket, msg):
             message_id = int(msg["message"][0]["data"]["id"])
             asyncio.create_task(delete_msg(websocket, message_id))
 
-        if is_authorized:
-            if raw_message.startswith("add ban word ") or raw_message.startswith(
-                "添加违禁词 "
-            ):
-                new_word = raw_message.split(" ", 1)[1].strip()
-                banned_words = load_banned_words(group_id)
-                if new_word not in banned_words:
-                    banned_words.append(new_word)
-                    save_banned_words(group_id, banned_words)
-                    asyncio.create_task(
-                        send_group_msg(websocket, group_id, f"已添加违禁词: {new_word}")
-                    )
-            elif raw_message.startswith("rm ban word ") or raw_message.startswith(
-                "删除违禁词 "
-            ):
-                remove_word = raw_message.split(" ", 1)[1].strip()
-                banned_words = load_banned_words(group_id)
-                if remove_word in banned_words:
-                    banned_words.remove(remove_word)
-                    save_banned_words(group_id, banned_words)
-                    asyncio.create_task(
-                        send_group_msg(
-                            websocket, group_id, f"已删除违禁词: {remove_word}"
-                        )
-                    )
-            elif raw_message == "list ban words" or raw_message == "查看违禁词":
-                asyncio.create_task(list_banned_words(websocket, group_id))
-
-        if is_authorized:
-            if raw_message == "on ban words" or raw_message == "开启违禁词检测":
-                if load_banned_words_status(group_id):
-                    asyncio.create_task(
-                        send_group_msg(
-                            websocket, group_id, "违禁词检测已经开启了，无需重复开启。"
-                        )
-                    )
-                else:
-                    save_banned_words_status(group_id, True)
-                    asyncio.create_task(
-                        send_group_msg(websocket, group_id, "已开启违禁词检测。")
-                    )
-            elif raw_message == "off ban words" or raw_message == "关闭违禁词检测":
-                if not load_banned_words_status(group_id):
-                    asyncio.create_task(
-                        send_group_msg(
-                            websocket, group_id, "违禁词检测已经关闭了，无需重复关闭。"
-                        )
-                    )
-                else:
-                    save_banned_words_status(group_id, False)
-                    asyncio.create_task(
-                        send_group_msg(websocket, group_id, "已关闭违禁词检测。")
-                    )
 
         if is_authorized:
             if raw_message == "enable_welcome_message" or raw_message == "开启入群欢迎":
@@ -346,9 +273,6 @@ async def handle_GroupManager_group_message(websocket, msg):
             else:
                 status_message = f"未找到群 {group_id} 的状态信息。"
             await send_group_msg(websocket, group_id, status_message)
-
-        # 前面执行完所有命令之后，检查违禁词
-        await check_banned_words(websocket, group_id, msg)
 
     except Exception as e:
         logging.error(f"处理群消息时出错: {e}")
