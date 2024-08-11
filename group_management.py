@@ -45,8 +45,8 @@ def load_ban_records(group_id):
 def save_ban_records(user_id, group_id):
     records = load_ban_records(group_id)
 
-    # 更新禁言记录
-    records[user_id] = datetime.now().strftime("%Y-%m-%d")
+    # 更新禁言记录，确保只有一个键值对存在
+    records = {user_id: datetime.now().strftime("%Y-%m-%d")}  # 修改为覆盖原有键值
 
     with open(os.path.join(BAN_RECORDS, f"ban_records_{group_id}.json"), "w") as f:
         json.dump(records, f, indent=4)  # 添加 indent 参数进行格式化
