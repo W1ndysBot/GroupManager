@@ -82,7 +82,9 @@ async def handle_GroupManager_group_message(websocket, msg):
 
             if kick_qq:
                 await set_group_kick(websocket, group_id, kick_qq)
-
+                await send_group_msg(
+                    websocket, group_id, f"[CQ:reply,id={message_id}] 已踢出 {kick_qq}"
+                )
         if re.match(r"ban.*", raw_message):
 
             # 指定禁言一个人
