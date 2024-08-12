@@ -140,7 +140,7 @@ def save_ban_records(user_id, group_id):
     records = load_ban_records(group_id)
 
     # 更新或添加指定 user_id 的禁言记录
-    records[user_id] = datetime.now().strftime("%Y-%m-%d")
+    records[str(user_id)] = datetime.now().strftime("%Y-%m-%d")
 
     with open(os.path.join(BAN_RECORDS, f"ban_records_{group_id}.json"), "w") as f:
         json.dump(records, f, indent=4)  # 使用 indent 参数进行格式化
