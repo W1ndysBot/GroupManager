@@ -22,9 +22,21 @@ BAN_RECORDS = os.path.join(
 async def banme_random_time(websocket, group_id, user_id):
     try:
         logging.info(f"执行禁言自己随机时间")
-        ban_time = random.randint(1, 2592000)
-        await set_group_ban(websocket, group_id, user_id, ban_time)
-        logging.info(f"随机禁言{group_id} 的 {user_id} {ban_time} 秒。")
+
+        # 调整禁言时间范围
+        ban_time = random.choice(
+            [
+                random.randint(1, 60),  # 1秒到1分钟
+                random.randint(61, 3600),  # 1分钟到1小时
+                random.randint(3601, 86400),  # 1小时到1天
+            ]
+        )
+
+        # 将实际禁言时间限制在5分钟以内
+        actual_ban_time = min(ban_time, 300)
+        await set_group_ban(websocket, group_id, user_id, actual_ban_time)
+
+        logging.info(f"随机禁言{group_id} 的 {user_id} {actual_ban_time} 秒。")
 
         # 加载当前用户的今日最高禁言时间
         user_max_ban_records = load_user_max_ban_records(group_id, user_id)
@@ -44,7 +56,8 @@ async def banme_random_time(websocket, group_id, user_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"恭喜你打破本群今日的最高禁言记录，现在本群今日的最高记录是 {ban_time} 秒，保持者是{user_id}。",
+                f"恭喜你打破本群今日的最高禁言记录！你抽中了 {ban_time} 秒的禁言时间，"
+                f"但实际只被禁言了 {actual_ban_time} 秒。现在本群今日的最高记录是 {ban_time} 秒，保持者是{user_id}。",
             )
         elif ban_time > user_max_ban_records:
             # 更新用户的今日最高记录
@@ -53,14 +66,16 @@ async def banme_random_time(websocket, group_id, user_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"恭喜你打破你今日的禁言最高记录，现在你今日的最高记录是 {ban_time} 秒。",
+                f"恭喜你打破你今日的禁言最高记录！你抽中了 {ban_time} 秒的禁言时间，"
+                f"但实际只被禁言了 {actual_ban_time} 秒。现在你今日的最高记录是 {ban_time} 秒。",
             )
         else:
             max_ban_user_str = f"，保持者是{max_ban_user}" if max_ban_user else ""
             await send_group_msg(
                 websocket,
                 group_id,
-                f"你被禁言了 {ban_time} 秒，今日群的最高禁言记录是 {max_ban_records} 秒{max_ban_user_str}。",
+                f"你抽中了 {ban_time} 秒的禁言时间，但实际只被禁言了 {actual_ban_time} 秒。"
+                f"今日群的最高禁言记录是 {max_ban_records} 秒{max_ban_user_str}。",
             )
     except Exception as e:
         logging.error(f"执行禁言自己随机时间时出错: {e}")
