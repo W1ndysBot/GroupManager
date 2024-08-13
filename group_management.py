@@ -32,7 +32,9 @@ async def banme_random_time(websocket, group_id, user_id):
 
         # 加载当前群的今日最高禁言时间
         max_ban_records, max_ban_user = load_group_max_ban_user_records(group_id)
-        logging.info(f"max_ban_records: {max_ban_records}")
+        logging.info(
+            f"max_ban_records: {max_ban_records}, max_ban_user: {max_ban_user}"
+        )
 
         # 检查是否打破本群的今日最高禁言记录
         if ban_time > max_ban_records:
@@ -54,13 +56,19 @@ async def banme_random_time(websocket, group_id, user_id):
                 f"恭喜你打破你今日的禁言最高记录，现在你今日的最高记录是 {ban_time} 秒。",
             )
         else:
+            max_ban_user_str = f"，保持者是{max_ban_user}" if max_ban_user else ""
             await send_group_msg(
                 websocket,
                 group_id,
-                f"你被禁言了 {ban_time} 秒，今日群的最高禁言记录是 {max_ban_records} 秒，保持者是{max_ban_user}。",
+                f"你被禁言了 {ban_time} 秒，今日群的最高禁言记录是 {max_ban_records} 秒{max_ban_user_str}。",
             )
     except Exception as e:
         logging.error(f"执行禁言自己随机时间时出错: {e}")
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"执行禁言操作时发生错误，请稍后再试或联系管理员。",
+        )
 
 
 # 加载群的今日最高禁言记录，返回禁言时间最长的用户ID和时间
@@ -71,7 +79,7 @@ def load_group_max_ban_user_records(group_id):
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 records = json.load(f)
-                if today in records:
+                if today in records and records[today]:
                     max_user = max(records[today], key=records[today].get)
                     return records[today][max_user], max_user
         else:
