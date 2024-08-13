@@ -14,7 +14,7 @@ from app.scripts.GroupManager.group_management import *
 
 from app.api import *
 from app.config import owner_id
-
+from app.switch import load_switch, save_switch
 
 DATA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
