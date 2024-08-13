@@ -5,7 +5,7 @@ import sys
 import os
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, date
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,76 +26,77 @@ async def banme_random_time(websocket, group_id, user_id):
         await set_group_ban(websocket, group_id, user_id, ban_time)
         logging.info(f"随机禁言{group_id} 的 {user_id} {ban_time} 秒。")
 
-        # 加载当前用户的最高禁言时间
+        # 加载当前用户的今日最高禁言时间
         user_max_ban_records = load_user_max_ban_records(group_id, user_id)
         logging.info(f"user_max_ban_records: {user_max_ban_records}")
 
-        # 加载当前群的最高禁言时间
-        max_ban_records = load_group_max_ban_user_records(group_id)
+        # 加载当前群的今日最高禁言时间
+        max_ban_records, max_ban_user = load_group_max_ban_user_records(group_id)
         logging.info(f"max_ban_records: {max_ban_records}")
 
-        # 检查是否打破本群的最高禁言记录
+        # 检查是否打破本群的今日最高禁言记录
         if ban_time > max_ban_records:
-            # 更新群的最高禁言记录
+            # 更新群的今日最高禁言记录
             save_user_max_ban_records(group_id, user_id, ban_time)
-            logging.info(f"更新群的最高禁言记录保持者{user_id}：{ban_time} 秒。")
+            logging.info(f"更新群的今日最高禁言记录保持者{user_id}：{ban_time} 秒。")
             await send_group_msg(
                 websocket,
                 group_id,
-                f"恭喜你打破本群新的最高禁言记录，现在本群新的最高记录是 {ban_time} 秒，保持者是{user_id}。",
+                f"恭喜你打破本群今日的最高禁言记录，现在本群今日的最高记录是 {ban_time} 秒，保持者是{user_id}。",
             )
         elif ban_time > user_max_ban_records:
-            # 更新用户的最高记录
-            user_max_ban_records = ban_time
-            save_user_max_ban_records(group_id, user_id, user_max_ban_records)
-            logging.info(f"更新用户{user_id}的最高禁言记录：{ban_time} 秒。")
+            # 更新用户的今日最高记录
+            save_user_max_ban_records(group_id, user_id, ban_time)
+            logging.info(f"更新用户{user_id}的今日最高禁言记录：{ban_time} 秒。")
             await send_group_msg(
                 websocket,
                 group_id,
-                f"恭喜你打破你的禁言最高记录，现在你的最高记录是 {ban_time} 秒。",
+                f"恭喜你打破你今日的禁言最高记录，现在你今日的最高记录是 {ban_time} 秒。",
             )
         else:
             await send_group_msg(
                 websocket,
                 group_id,
-                f"你被禁言了 {ban_time} 秒，现在群的最高禁言记录是 {max_ban_records} 秒。",
+                f"你被禁言了 {ban_time} 秒，今日群的最高禁言记录是 {max_ban_records} 秒，保持者是{max_ban_user}。",
             )
     except Exception as e:
         logging.error(f"执行禁言自己随机时间时出错: {e}")
 
 
-# 加载群的最高禁言记录，返回禁言时间最长的用户ID
+# 加载群的今日最高禁言记录，返回禁言时间最长的用户ID和时间
 def load_group_max_ban_user_records(group_id):
     file_path = os.path.join(BAN_RECORDS, f"max_ban_records_{group_id}.json")
+    today = date.today().isoformat()
     try:
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 records = json.load(f)
-                if records:
-                    return max(records.values(), default=0)
+                if today in records:
+                    max_user = max(records[today], key=records[today].get)
+                    return records[today][max_user], max_user
         else:
-            # 如果文件不存在，创建一个空文件并初始化为空字典
             with open(file_path, "w") as wf:
-                json.dump({}, wf, indent=4)
-        return 0
+                json.dump({today: {}}, wf, indent=4)
+        return 0, None
     except json.JSONDecodeError:
         logging.error(f"JSONDecodeError: 文件 {file_path} 为空或格式错误。")
         with open(file_path, "w") as wf:
-            json.dump({}, wf, indent=4)
-        return 0
+            json.dump({today: {}}, wf, indent=4)
+        return 0, None
 
 
 def load_user_max_ban_records(group_id, user_id):
     file_path = os.path.join(BAN_RECORDS, f"max_ban_records_{group_id}.json")
+    today = date.today().isoformat()
     try:
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 records = json.load(f)
-                return records.get(str(user_id), 0)
+                if today in records:
+                    return records[today].get(str(user_id), 0)
         else:
-            # 如果文件不存在，创建一个空文件并初始化为空字典
             with open(file_path, "w") as wf:
-                json.dump({}, wf, indent=4)
+                json.dump({today: {}}, wf, indent=4)
         return 0
     except json.JSONDecodeError:
         logging.error(f"JSONDecodeError: 文件 {file_path} 为空或格式错误。")
@@ -104,14 +105,18 @@ def load_user_max_ban_records(group_id, user_id):
 
 def save_user_max_ban_records(group_id, user_id, ban_time):
     file_path = os.path.join(BAN_RECORDS, f"max_ban_records_{group_id}.json")
+    today = date.today().isoformat()
     if os.path.exists(file_path):
         with open(file_path, "r") as f:
             records = json.load(f)
     else:
         records = {}
 
-    # 更新指定 user_id 的最高禁言记录
-    records[str(user_id)] = ban_time
+    if today not in records:
+        records[today] = {}
+
+    # 更新指定 user_id 的今日最高禁言记录
+    records[today][str(user_id)] = ban_time
 
     with open(file_path, "w") as f:
         json.dump(records, f, indent=4)
