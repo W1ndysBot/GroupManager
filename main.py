@@ -112,7 +112,7 @@ async def handle_GroupManager_group_message(websocket, msg):
                 re.match(r"ban.*", raw_message) or re.match(r"禁言.*", raw_message)
             ) and is_authorized:
 
-                await ban_user(websocket, group_id, msg["message"], self_id)
+                await ban_user(websocket, group_id, msg["message"], self_id, user_id)
 
         # 解禁
         if (
