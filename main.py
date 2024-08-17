@@ -121,7 +121,7 @@ async def handle_GroupManager_group_message(websocket, msg):
             await unban_user(websocket, group_id, msg["message"])
 
         # 撤回消息
-        if "recall" in raw_message or "撤回" in raw_message and is_authorized:
+        if "recall" == raw_message or "撤回" == raw_message and is_authorized:
             message_id = int(msg["message"][0]["data"]["id"])
             await delete_msg(websocket, message_id)
 
