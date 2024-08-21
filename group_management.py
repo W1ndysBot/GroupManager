@@ -56,24 +56,14 @@ async def banme_random_time(websocket, group_id, user_id):
                 websocket,
                 group_id,
                 f"恭喜你打破本群今日的最高禁言记录！你抽中了 {ban_time} 秒的禁言时间，"
-                f"实际被禁言了 {actual_ban_time} 秒。现在本群今日的最高记录是 {ban_time} 秒，保持者是{user_id}。",
-            )
-        elif ban_time > user_max_ban_records:
-            # 更新用户的今日最高记录
-            save_user_max_ban_records(group_id, user_id, ban_time)
-            logging.info(f"更新用户{user_id}的今日最高禁言记录：{ban_time} 秒。")
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"恭喜你打破你今日的禁言最高记录！你抽中了 {ban_time} 秒的禁言时间，"
-                f"实际被禁言了 {actual_ban_time} 秒。现在你今日的最高记录是 {ban_time} 秒。",
+                f"根据宇宙卷卷对数函数弹性计算公式实际被禁言了 {actual_ban_time} 秒。现在本群今日的最高记录是 {ban_time} 秒，保持者是{user_id}。",
             )
         else:
             max_ban_user_str = f"，保持者是{max_ban_user}" if max_ban_user else ""
             await send_group_msg(
                 websocket,
                 group_id,
-                f"你抽中了 {ban_time} 秒的禁言时间，实际被禁言了 {actual_ban_time} 秒。"
+                f"你抽中了 {ban_time} 秒的禁言时间，根据宇宙卷卷对数函数弹性计算公式实际被禁言了 {actual_ban_time} 秒。"
                 f"今日群的最高禁言记录是 {max_ban_records} 秒{max_ban_user_str}。",
             )
     except Exception as e:
