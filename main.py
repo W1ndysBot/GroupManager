@@ -42,8 +42,8 @@ def is_authorized(role, user_id):
 
 async def handle_GroupManager_group_message(websocket, msg):
     try:
-        user_id = msg["user_id"]
-        group_id = msg["group_id"]
+        user_id = str(msg["user_id"])
+        group_id = str(msg["group_id"])
         raw_message = msg["raw_message"]
         role = msg["sender"]["role"]
         message_id = int(msg["message_id"])
