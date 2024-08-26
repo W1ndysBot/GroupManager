@@ -60,11 +60,11 @@ async def handle_GroupManager_group_message(websocket, msg):
             logging.info("收到管理员的测试消息。")
             if raw_message == "测试":
                 await send_group_msg(
-                    websocket, group_id, f"[CQ:reply,id={message_id}测试成功"
+                    websocket, group_id, f"[CQ:reply,id={message_id}]测试成功"
                 )
             elif raw_message == "test":
                 await send_group_msg(
-                    websocket, group_id, f"[CQ:reply,id={message_id}Test successful"
+                    websocket, group_id, f"[CQ:reply,id={message_id}]Test successful"
                 )
 
         if raw_message == "banall" and is_authorized:
@@ -82,13 +82,15 @@ async def handle_GroupManager_group_message(websocket, msg):
             )
 
             if kick_qq == self_id:
-                await send_group_msg(websocket, group_id, "踢我干什么！")
+                await send_group_msg(
+                    websocket, group_id, f"[CQ:reply,id={message_id}]踢我干什么！"
+                )
                 return
 
             if kick_qq:
                 await set_group_kick(websocket, group_id, kick_qq)
                 await send_group_msg(
-                    websocket, group_id, f"[CQ:reply,id={message_id}] 已踢出 {kick_qq}"
+                    websocket, group_id, f"[CQ:reply,id={message_id}]已踢出 {kick_qq}"
                 )
         if re.match(r"ban.*", raw_message):
 
