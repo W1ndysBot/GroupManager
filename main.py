@@ -45,7 +45,8 @@ async def handle_GroupManager_group_message(websocket, msg):
         user_id = str(msg["user_id"])
         group_id = str(msg["group_id"])
         raw_message = msg["raw_message"]
-        role = msg["sender"]["role"]
+        # role = msg["sender"]["role"]
+        role = str(msg.get("sender", {}).get(role, ""))
         message_id = str(msg["message_id"])
         self_id = str(msg.get("self_id", ""))  # 机器人QQ，转为字符串方便操作
 
@@ -58,9 +59,13 @@ async def handle_GroupManager_group_message(websocket, msg):
         if is_authorized and (raw_message == "测试" or raw_message == "test"):
             logging.info("收到管理员的测试消息。")
             if raw_message == "测试":
-                await send_group_msg(websocket, group_id, "测试成功")
+                await send_group_msg(
+                    websocket, group_id, f"[CQ:reply,id={message_id}测试成功"
+                )
             elif raw_message == "test":
-                await send_group_msg(websocket, group_id, "Test successful")
+                await send_group_msg(
+                    websocket, group_id, f"[CQ:reply,id={message_id}Test successful"
+                )
 
         if raw_message == "banall" and is_authorized:
             await set_group_whole_ban(websocket, group_id, True)
@@ -97,7 +102,7 @@ async def handle_GroupManager_group_message(websocket, msg):
 
             # 禁言自己
             if raw_message == "banme" or raw_message == "禁言我":
-                await banme_random_time(websocket, group_id, user_id)
+                await banme_random_time(websocket, group_id, user_id,message_id)
                 return
 
             # 随机禁言

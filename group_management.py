@@ -22,7 +22,7 @@ BAN_RECORDS = os.path.join(
 from app.config import owner_id
 
 
-async def banme_random_time(websocket, group_id, user_id):
+async def banme_random_time(websocket, group_id, user_id, message_id):
     try:
         logging.info(f"执行禁言自己随机时间")
 
@@ -50,11 +50,11 @@ async def banme_random_time(websocket, group_id, user_id):
         if ban_time > max_ban_records:
             # 更新群的今日最高禁言记录
             save_user_max_ban_records(group_id, user_id, ban_time)
-            logging.info(f"更新群的今日最高禁言记录保持者{user_id}：{ban_time} 秒。")
+            # logging.info(f"更新群的今日最高禁言记录保持者{user_id}：{ban_time} 秒。")
             await send_group_msg(
                 websocket,
                 group_id,
-                f"恭喜你打破本群今日的最高禁言记录！你抽中了 {ban_time} 秒的禁言时间，"
+                f"[CQ:reply,id={message_id}恭喜你打破本群今日的最高禁言记录！你抽中了 {ban_time} 秒的禁言时间，"
                 f"根据宇宙卷卷对数函数弹性计算公式实际被禁言了 {actual_ban_time} 秒。现在本群今日的最高记录是 {ban_time} 秒，保持者是{user_id}。",
             )
         else:
@@ -62,7 +62,7 @@ async def banme_random_time(websocket, group_id, user_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"你抽中了 {ban_time} 秒的禁言时间，根据宇宙卷卷对数函数弹性计算公式实际被禁言了 {actual_ban_time} 秒。"
+                f"[CQ:reply,id={message_id}你抽中了 {ban_time} 秒的禁言时间，根据宇宙卷卷对数函数弹性计算公式实际被禁言了 {actual_ban_time} 秒。"
                 f"今日群的最高禁言记录是 {max_ban_records} 秒{max_ban_user_str}。",
             )
     except Exception as e:
