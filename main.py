@@ -46,7 +46,7 @@ async def handle_GroupManager_group_message(websocket, msg):
         group_id = str(msg["group_id"])
         raw_message = msg["raw_message"]
         role = msg["sender"]["role"]
-        message_id = int(msg["message_id"])
+        message_id = str(msg["message_id"])
         self_id = str(msg.get("self_id", ""))  # 机器人QQ，转为字符串方便操作
 
         is_admin = is_group_admin(role)  # 是否是群管理员
