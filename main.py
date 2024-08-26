@@ -46,7 +46,7 @@ async def handle_GroupManager_group_message(websocket, msg):
         group_id = str(msg["group_id"])
         raw_message = msg["raw_message"]
         # role = msg["sender"]["role"]
-        role = str(msg.get("sender", {}).get(role, ""))
+        role = str(msg.get("sender", {}).get("role", ""))
         message_id = str(msg["message_id"])
         self_id = str(msg.get("self_id", ""))  # 机器人QQ，转为字符串方便操作
 
@@ -102,7 +102,7 @@ async def handle_GroupManager_group_message(websocket, msg):
 
             # 禁言自己
             if raw_message == "banme" or raw_message == "禁言我":
-                await banme_random_time(websocket, group_id, user_id,message_id)
+                await banme_random_time(websocket, group_id, user_id, message_id)
                 return
 
             # 随机禁言
@@ -131,4 +131,4 @@ async def handle_GroupManager_group_message(websocket, msg):
             await delete_msg(websocket, message_id)
 
     except Exception as e:
-        logging.error(f"处理群消息时出错: {e}")
+        logging.error(f"处理群管理群消息时出错: {e}")
