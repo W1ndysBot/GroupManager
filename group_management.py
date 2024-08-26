@@ -32,10 +32,9 @@ async def banme_random_time(websocket, group_id, user_id):
         # 使用对数函数计算实际禁言时间，最短1秒，最长5分钟
         actual_ban_time = min(int(math.log(ban_time, 1.07)) + 1, 300)
         await set_group_ban(websocket, group_id, user_id, actual_ban_time)
-
-        logging.info(
-            f"随机禁言{group_id} 的 {user_id} 抽中 {ban_time} 秒，实际禁言 {actual_ban_time} 秒。"
-        )
+        # logging.info(
+        #     f"随机禁言{group_id} 的 {user_id} 抽中 {ban_time} 秒，实际禁言 {actual_ban_time} 秒。"
+        # )
 
         # 加载当前用户的今日最高禁言时间
         user_max_ban_records = load_user_max_ban_records(group_id, user_id)
