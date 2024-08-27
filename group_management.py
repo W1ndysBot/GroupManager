@@ -228,7 +228,7 @@ async def unban_user(websocket, group_id, message):
 async def ban_random_user(websocket, group_id, message):
     logging.info("收到管理员的随机禁言一个有缘人消息。")
     response_data = await get_group_member_list(websocket, group_id, no_cache=True)
-    logging.info(f"response_data: {response_data}")
+    # logging.info(f"response_data: {response_data}")
     if response_data["status"] == "ok" and response_data["retcode"] == 0:
         members = response_data["data"]
         if members:
