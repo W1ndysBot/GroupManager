@@ -229,25 +229,22 @@ async def ban_random_user(websocket, group_id, message):
     logging.info("收到管理员的随机禁言一个有缘人消息。")
     response_data = await get_group_member_list(websocket, group_id, no_cache=True)
     # logging.info(f"response_data: {response_data}")
-    if response_data["status"] == "ok" and response_data["retcode"] == 0:
-        members = response_data["data"]
+    members = response_data
+    if members:
+        members = [
+            member for member in members if member["role"] not in ["owner", "admin"]
+        ]
         if members:
-            members = [
-                member for member in members if member["role"] not in ["owner", "admin"]
-            ]
-            if members:
-                random_member = random.choice(members)
-                ban_qq = random_member["user_id"]
-                ban_duration = random.randint(1, 600)
-                ban_message = f"让我们恭喜 [CQ:at,qq={ban_qq}] 被禁言了 {ban_duration} 秒。\n注：群主及管理员无法被禁言。"
-                await set_group_ban(websocket, group_id, ban_qq, ban_duration)
-            else:
-                logging.info("没有可禁言的成员。")
-                ban_message = "没有可禁言的成员。"
+            random_member = random.choice(members)
+            ban_qq = random_member["user_id"]
+            ban_duration = random.randint(1, 600)
+            ban_message = f"让我们恭喜 [CQ:at,qq={ban_qq}] 被禁言了 {ban_duration} 秒。\n注：群主及管理员无法被禁言。"
+            await set_group_ban(websocket, group_id, ban_qq, ban_duration)
         else:
-            logging.info("群成员列表为空。")
-            ban_message = "群成员列表为空。"
+            logging.info("没有可禁言的成员。")
+            ban_message = "没有可禁言的成员。"
+    else:
+        logging.info("群成员列表为空。")
+        ban_message = "群成员列表为空。"
 
         await send_group_msg(websocket, group_id, ban_message)
-    else:
-        logging.error(f"处理消息时出错: {response_data}")
