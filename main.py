@@ -40,6 +40,31 @@ def is_authorized(role, user_id):
     return (is_admin or is_owner) or (user_id in owner_id)
 
 
+# 群管系统菜单
+async def GroupManager(websocket, group_id, message_id):
+    message = (
+        f"[CQ:reply,id={message_id}]\n"
+        + """
+GroupManager 群管理系统
+
+ban@ 时间 禁言x秒，默认60秒
+unban@ 解除禁言
+banme 随机禁言自己随机秒
+banrandom 随机禁言一个群友随机秒
+banall 全员禁言
+unbanall 全员解禁
+t@ 踢出指定用户
+del 撤回消息(需要回复要撤回的消息)
+vc-on 开启视频监控
+vc-off 关闭视频监控
+wf-on 开启欢迎欢送
+wf-off 关闭欢迎欢送
+wf-set 设置欢迎词
+"""
+    )
+    await send_group_msg(websocket, group_id, message)
+
+
 async def handle_GroupManager_group_message(websocket, msg):
     try:
         user_id = str(msg["user_id"])
@@ -56,6 +81,8 @@ async def handle_GroupManager_group_message(websocket, msg):
             user_id in owner_id
         )  # 是否是群主或管理员或root管理员
 
+        if raw_message == "groupmanager" or raw_message == "群管":
+            await GroupManager(websocket, group_id, message_id)
         if is_authorized and (raw_message == "测试" or raw_message == "test"):
             logging.info("收到管理员的测试消息。")
             if raw_message == "测试":
