@@ -2,7 +2,8 @@ import logging
 import re
 import os
 import sys
-import asyncio
+
+from datetime import datetime
 
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -124,6 +125,10 @@ async def handle_GroupManager_group_message(websocket, msg):
             # 指定禁言一个人
             if re.match(r"banyou.*", raw_message):
 
+                # 屏蔽的群号
+                if group_id == "437096728":
+                    return
+
                 await ban_somebody(
                     websocket, user_id, group_id, msg["message"], self_id
                 )
@@ -131,6 +136,11 @@ async def handle_GroupManager_group_message(websocket, msg):
 
             # 禁言自己
             if raw_message == "banme" or raw_message == "禁言我":
+
+                # 屏蔽的群号
+                if group_id == "437096728":
+                    return
+
                 await banme_random_time(websocket, group_id, user_id, message_id)
                 return
 
