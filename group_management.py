@@ -1,9 +1,7 @@
-from asyncio import create_task
 import random
 import logging
 import sys
 import os
-import asyncio
 import json
 from datetime import datetime, date
 import math
@@ -32,25 +30,18 @@ async def banme_random_time(websocket, group_id, user_id, message_id):
         # 使用对数函数计算实际禁言时间，最短1秒，最长5分钟
         actual_ban_time = min(int(math.log(ban_time, 1.07)) + 1, 300)
         await set_group_ban(websocket, group_id, user_id, actual_ban_time)
-        # logging.info(
-        #     f"随机禁言{group_id} 的 {user_id} 抽中 {ban_time} 秒，实际禁言 {actual_ban_time} 秒。"
-        # )
 
         # 加载当前用户的今日最高禁言时间
         user_max_ban_records = load_user_max_ban_records(group_id, user_id)
-        logging.info(f"user_max_ban_records: {user_max_ban_records}")
 
         # 加载当前群的今日最高禁言时间
         max_ban_records, max_ban_user = load_group_max_ban_user_records(group_id)
-        logging.info(
-            f"max_ban_records: {max_ban_records}, max_ban_user: {max_ban_user}"
-        )
 
         # 检查是否打破本群的今日最高禁言记录
         if ban_time > max_ban_records:
             # 更新群的今日最高禁言记录
             save_user_max_ban_records(group_id, user_id, ban_time)
-            # logging.info(f"更新群的今日最高禁言记录保持者{user_id}：{ban_time} 秒。")
+
             await send_group_msg(
                 websocket,
                 group_id,
@@ -59,6 +50,11 @@ async def banme_random_time(websocket, group_id, user_id, message_id):
             )
         else:
             max_ban_user_str = f"，保持者是{max_ban_user}" if max_ban_user else ""
+
+            if ban_time > user_max_ban_records:
+                # 更新当前用户今日最高禁言记录
+                save_user_max_ban_records(group_id, user_id, ban_time)
+
             await send_group_msg(
                 websocket,
                 group_id,
@@ -254,3 +250,49 @@ async def ban_random_user(websocket, group_id, message):
         ban_message = "群成员列表为空。"
 
         await send_group_msg(websocket, group_id, ban_message)
+
+
+# 获取某群的banme最高记录
+def get_ban_records(group_id, today):
+    file_path = os.path.join(BAN_RECORDS, f"max_ban_records_{group_id}.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r") as f:
+            try:
+                records = json.load(f)
+                if today in records:
+                    today_records = records[today]
+                    sorted_records = sorted(
+                        today_records.items(), key=lambda x: x[1], reverse=True
+                    )
+                    return sorted_records
+                else:
+                    logging.warning(f"没有找到日期 {today} 的记录。")
+                    return []
+            except json.JSONDecodeError:
+                logging.error(
+                    f"JSONDecodeError: 文件 max_ban_records_{group_id}.json 为空或格式错误。"
+                )
+                return []
+    return []
+
+
+# 查看禁言排行
+async def banme_rank(websocket, group_id, message_id):
+    today = datetime.now().strftime("%Y-%m-%d")
+    ban_records = get_ban_records(group_id, today)
+    if ban_records:
+        logging.info(f"获取{group_id}今日禁言排行")
+        message = f"[CQ:reply,id={message_id}]今日禁言排行：\n"
+        for idx, record in enumerate(ban_records[:10], 1):
+            message += f"{idx}. <{record[0]}>：{record[1]} 秒\n"
+        await send_group_msg(
+            websocket,
+            group_id,
+            message,
+        )
+    else:
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]今日没有禁言记录。",
+        )

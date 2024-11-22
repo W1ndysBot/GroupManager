@@ -3,7 +3,6 @@ import re
 import os
 import sys
 
-from datetime import datetime
 
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,7 +14,6 @@ from app.scripts.GroupManager.group_management import *
 
 from app.api import *
 from app.config import owner_id
-from app.switch import load_switch, save_switch
 
 DATA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -51,6 +49,7 @@ GroupManager 群管理系统
 ban@ 时间 禁言x秒，默认60秒
 unban@ 解除禁言
 banme 随机禁言自己随机秒
+banmerank 查看当日禁言排行
 banrandom 随机禁言一个群友随机秒
 banall 全员禁言
 unbanall 全员解禁
@@ -133,6 +132,11 @@ async def handle_GroupManager_group_message(websocket, msg):
             # 禁言自己
             if raw_message == "banme" or raw_message == "禁言我":
                 await banme_random_time(websocket, group_id, user_id, message_id)
+                return
+
+            # 查看禁言排行
+            if raw_message == "banmerank":
+                await banme_rank(websocket, group_id, message_id)
                 return
 
             # 随机禁言
