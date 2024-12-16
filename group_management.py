@@ -73,6 +73,13 @@ async def banme_random_time(websocket, group_id, user_id, message_id):
 # 加载群的今日最高禁言记录，返回禁言时间最长的用户ID和时间
 def load_group_max_ban_user_records(group_id):
     file_path = os.path.join(BAN_RECORDS, f"max_ban_records_{group_id}.json")
+    # 如果文件不存在，则创建文件
+    if not os.path.exists(file_path):
+        # 创建目录
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # 创建文件
+        with open(file_path, "w") as wf:
+            json.dump({date.today().isoformat(): {}}, wf, indent=4)
     today = date.today().isoformat()
     try:
         if os.path.exists(file_path):
@@ -94,6 +101,15 @@ def load_group_max_ban_user_records(group_id):
 
 def load_user_max_ban_records(group_id, user_id):
     file_path = os.path.join(BAN_RECORDS, f"max_ban_records_{group_id}.json")
+
+    # 如果文件不存在，则创建文件
+    if not os.path.exists(file_path):
+        # 创建目录
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # 创建文件
+        with open(file_path, "w") as wf:
+            json.dump({date.today().isoformat(): {}}, wf, indent=4)
+
     today = date.today().isoformat()
     try:
         if os.path.exists(file_path):
@@ -117,6 +133,11 @@ def save_user_max_ban_records(group_id, user_id, ban_time):
         with open(file_path, "r") as f:
             records = json.load(f)
     else:
+        # 创建目录
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # 创建文件
+        with open(file_path, "w") as wf:
+            json.dump({today: {}}, wf, indent=4)
         records = {}
 
     if today not in records:
