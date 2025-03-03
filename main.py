@@ -131,6 +131,11 @@ async def handle_GroupManager_group_message(websocket, msg):
 
             # 禁言自己
             if raw_message == "banme" or raw_message == "禁言我":
+
+                # 屏蔽的群
+                if group_id in ["798794707"]:
+                    return
+
                 await banme_random_time(websocket, group_id, user_id, message_id)
                 return
 
