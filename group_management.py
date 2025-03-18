@@ -200,9 +200,10 @@ async def ban_somebody(websocket, user_id, group_id, message, self_id):
             await set_group_ban(websocket, group_id, user_id, ban_duration)
             return
 
-        if ban_qq in owner_id:
-            await send_group_msg(websocket, group_id, "禁我爹干什么，给你来一分钟！")
-            ban_duration = 60
+        if ban_qq == "2769731875":
+            await send_group_msg(websocket, group_id, "禁W1ndys干什么，ban你！")
+            ban_duration = int(random.paretovariate(1.5) * 60)
+            ban_duration = min(ban_duration, 2592000)
             await set_group_ban(websocket, group_id, user_id, ban_duration)
             return
 
