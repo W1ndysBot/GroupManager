@@ -181,6 +181,8 @@ def save_ban_records(user_id, group_id):
 
 # 指定禁言一个人
 async def ban_somebody(websocket, user_id, group_id, message, self_id):
+    if group_id == "798794707":
+        return
     ban_qq = None
     ban_duration = None
     ban_qq = next(
