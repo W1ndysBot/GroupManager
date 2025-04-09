@@ -47,13 +47,16 @@ async def GroupManager(websocket, group_id, message_id):
 GroupManager 群管理系统
 
 ban@ 时间 禁言x秒，默认60秒
+ban@1 @2 @3 时间 批量禁言多人
 unban@ 解除禁言
+unban@1 @2 @3 批量解除禁言
 banme 随机禁言自己随机秒
 banmerank 查看当日禁言排行
 banrandom 随机禁言一个群友随机秒
 banall 全员禁言
 unbanall 全员解禁
 t@ 踢出指定用户
+t@1 @2 @3 批量踢出多个用户
 del 撤回消息(需要回复要撤回的消息)
 vc-on 开启视频监控
 vc-off 关闭视频监控
@@ -102,22 +105,37 @@ async def handle_GroupManager_group_message(websocket, msg):
             return
 
         if is_authorized and re.match(r"t.*", raw_message):
-            kick_qq = None
-            kick_qq = next(
-                (item["data"]["qq"] for item in msg["message"] if item["type"] == "at"),
-                None,
-            )
+            # 获取所有被@的用户QQ号
+            at_users = [
+                item["data"]["qq"] for item in msg["message"] if item["type"] == "at"
+            ]
 
-            if kick_qq == self_id:
+            if not at_users:
                 await send_group_msg(
-                    websocket, group_id, f"[CQ:reply,id={message_id}]踢我干什么！"
+                    websocket, group_id, f"[CQ:reply,id={message_id}]请@要踢出的用户"
                 )
                 return
 
-            if kick_qq:
-                await set_group_kick(websocket, group_id, kick_qq)
+            # 检查是否尝试踢出机器人自己
+            if self_id in at_users:
                 await send_group_msg(
-                    websocket, group_id, f"[CQ:reply,id={message_id}]已踢出 {kick_qq}"
+                    websocket, group_id, f"[CQ:reply,id={message_id}]踢我干什么！"
+                )
+                at_users.remove(self_id)  # 从列表中移除机器人自己
+                if not at_users:  # 如果没有其他人了，就直接返回
+                    return
+
+            # 批量踢人
+            kicked_users = []
+            for kick_qq in at_users:
+                await set_group_kick(websocket, group_id, kick_qq)
+                kicked_users.append(kick_qq)
+
+            if kicked_users:
+                await send_group_msg(
+                    websocket,
+                    group_id,
+                    f"[CQ:reply,id={message_id}]已踢出 {', '.join(kicked_users)}",
                 )
         if re.match(r"ban.*", raw_message):
 
@@ -155,14 +173,15 @@ async def handle_GroupManager_group_message(websocket, msg):
             if (
                 re.match(r"ban.*", raw_message) or re.match(r"禁言.*", raw_message)
             ) and is_authorized:
-
-                await ban_user(websocket, group_id, msg["message"], self_id, user_id)
+                await ban_user(
+                    websocket, group_id, msg["message"], self_id, user_id, message_id
+                )
 
         # 解禁
         if (
             re.match(r"unban.*", raw_message) or re.match(r"解禁.*", raw_message)
         ) and is_authorized:
-            await unban_user(websocket, group_id, msg["message"])
+            await unban_user(websocket, group_id, msg["message"], message_id)
 
         # 撤回消息
         if "del" in raw_message and is_authorized:

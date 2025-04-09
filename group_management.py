@@ -5,6 +5,7 @@ import os
 import json
 from datetime import datetime, date
 import math
+import re
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -223,32 +224,80 @@ async def ban_somebody(websocket, user_id, group_id, message, self_id):
         await set_group_ban(websocket, group_id, ban_qq, ban_duration)
 
 
-async def ban_user(websocket, group_id, message, self_id, user_id):
-    ban_qq = None
-    ban_duration = None
-    for i, item in enumerate(message):
-        if item["type"] == "at":
-            ban_qq = item["data"]["qq"]
-            if i + 1 < len(message) and message[i + 1]["type"] == "text":
-                ban_duration = int(message[i + 1]["data"]["text"].strip())
-            else:
-                ban_duration = 60
-    if ban_qq and ban_duration:
+# 修改ban_user函数支持批量禁言
+async def ban_user(websocket, group_id, message, self_id, user_id, message_id):
+    try:
+        # 获取所有被@的用户QQ号
+        at_users = [item["data"]["qq"] for item in message if item["type"] == "at"]
 
-        if self_id == ban_qq:
-            await send_group_msg(websocket, group_id, "禁我干什么！")
+        if not at_users:
+            await send_group_msg(
+                websocket, group_id, f"[CQ:reply,id={message_id}]请@要禁言的用户"
+            )
             return
 
-        await set_group_ban(websocket, group_id, ban_qq, ban_duration)
+        # 检查是否尝试禁言机器人自己
+        if self_id in at_users:
+            await send_group_msg(
+                websocket, group_id, f"[CQ:reply,id={message_id}]不能禁言我自己！"
+            )
+            at_users.remove(self_id)  # 从列表中移除机器人自己
+            if not at_users:  # 如果没有其他人了，就直接返回
+                return
+
+        # 尝试提取禁言时间
+        raw_message = " ".join(
+            [item["data"]["text"] for item in message if item["type"] == "text"]
+        )
+        ban_time = 60  # 默认60秒
+
+        # 查找数字
+        duration_match = re.search(r"\d+", raw_message)
+        if duration_match:
+            ban_time = int(duration_match.group())
+
+        # 批量禁言
+        banned_users = []
+        for ban_qq in at_users:
+            await set_group_ban(websocket, group_id, ban_qq, ban_time)
+            banned_users.append(ban_qq)
+
+        if banned_users:
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]已禁言用户: {', '.join(banned_users)} {ban_time}秒",
+            )
+    except Exception as e:
+        logging.error(f"禁言用户出错: {e}")
 
 
-async def unban_user(websocket, group_id, message):
-    logging.info("收到管理员的解禁消息。")
-    unban_qq = None
-    for item in message:
-        if item["type"] == "at":
-            unban_qq = item["data"]["qq"]
-    await set_group_ban(websocket, group_id, unban_qq, 0)
+# 修改unban_user函数支持批量解禁
+async def unban_user(websocket, group_id, message, message_id):
+    try:
+        # 获取所有被@的用户QQ号
+        at_users = [item["data"]["qq"] for item in message if item["type"] == "at"]
+
+        if not at_users:
+            await send_group_msg(
+                websocket, group_id, f"[CQ:reply,id={message_id}]请@要解除禁言的用户"
+            )
+            return
+
+        # 批量解禁
+        unbanned_users = []
+        for unban_qq in at_users:
+            await set_group_ban(websocket, group_id, unban_qq, 0)  # 0秒表示解除禁言
+            unbanned_users.append(unban_qq)
+
+        if unbanned_users:
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]已解除禁言: {', '.join(unbanned_users)}",
+            )
+    except Exception as e:
+        logging.error(f"解除禁言出错: {e}")
 
 
 async def ban_random_user(websocket, group_id, message):
