@@ -111,9 +111,6 @@ async def handle_GroupManager_group_message(websocket, msg):
             ]
 
             if not at_users:
-                await send_group_msg(
-                    websocket, group_id, f"[CQ:reply,id={message_id}]请@要踢出的用户"
-                )
                 return
 
             # 检查是否尝试踢出机器人自己
