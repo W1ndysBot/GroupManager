@@ -216,7 +216,7 @@ async def ban_somebody(websocket, user_id, group_id, message, self_id):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:at,qq={user_id}] 你今天已经ban过别人一次了，还想ban？[CQ:face,id=14]。",
+                f"[CQ:at,qq={user_id}]({user_id}) 你今天已经ban过别人一次了，还想ban？[CQ:face,id=14]。",
             )
             return
 
